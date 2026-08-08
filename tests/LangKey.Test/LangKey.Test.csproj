@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>ArkheideSystem.LangKey.Test</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <UseWPF>true</UseWPF>
+    <LangKeyNamespace>ArkheideSystem.LangKey.Test.Generated</LangKeyNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LangKey\LangKey.csproj" />
+    <ProjectReference Include="..\..\src\LangKey.DependencyInjection\LangKey.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\src\LangKey.Wpf\LangKey.Wpf.csproj" />
+    <ProjectReference Include="..\..\src\LangKey.Generator\LangKey.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <AdditionalFiles Include="LangKey.json" />
+    <CompilerVisibleProperty Include="LangKeyNamespace" />
+    <Using Include="System.IO" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

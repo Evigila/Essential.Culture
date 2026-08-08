@@ -1,0 +1,10 @@
+{
+  "Title_Hello": {
+    "en-US": "Hello World!",
+    "zh-CN": "你好 世界！"
+  },
+  "Message_Count": {
+    "en-US": "Count: {0}",
+    "zh-CN": "数量：{0}"
+  }
+}

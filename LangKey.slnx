@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/LangKey/LangKey.csproj" />
+  <Project Path="src/LangKey.DependencyInjection/LangKey.DependencyInjection.csproj" />
+  <Project Path="src/LangKey.Wpf/LangKey.Wpf.csproj" />
+  <Project Path="src/LangKey.Generator/LangKey.Generator.csproj" />
+  <Project Path="tests/LangKey.Test/LangKey.Test.csproj" />
+</Solution>
