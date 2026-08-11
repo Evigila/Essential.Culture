@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="LangKey.Demo.Console/LangKey.Demo.Console.csproj" />
+  <Project Path="LangKey.Demo.Wpf/LangKey.Demo.Wpf.csproj" />
+  <Project Path="LangKey.Demo.Wpf.DependencyInjection/LangKey.Demo.Wpf.DependencyInjection.csproj" />
+  <Project Path="LangKey.Demo.Avalonia.DependencyInjection/LangKey.Demo.Avalonia.DependencyInjection.csproj" />
+  <Project Path="LangKey.Demo.WinUI3.DependencyInjection/LangKey.Demo.WinUI3.DependencyInjection.csproj" />
+</Solution>

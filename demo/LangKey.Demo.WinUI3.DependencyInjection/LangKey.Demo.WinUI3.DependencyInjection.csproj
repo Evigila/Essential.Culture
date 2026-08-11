@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>ArkheideSystem.LangKey.Demo.WinUI3Di</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <LangKeyNamespace>ArkheideSystem.LangKey.Demo.Shared</LangKeyNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="..\LangKey.json" Link="LangKey.json" />
+    <None Include="..\LangKey.json" Link="LangKey.json" CopyToOutputDirectory="PreserveNewest" />
+    <Compile Include="..\Shared\DemoCultureSource.cs" Link="Shared\DemoCultureSource.cs" />
+    <Compile Include="..\Shared\DelegateCommand.cs" Link="Shared\DelegateCommand.cs" />
+    <Compile
+      Include="..\Shared\LocalizedDemoViewModel.cs"
+      Link="Shared\LocalizedDemoViewModel.cs"
+    />
+    <CompilerVisibleProperty Include="LangKeyNamespace" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.3.1" />
+    <ProjectReference Include="..\..\src\LangKey.DependencyInjection\LangKey.DependencyInjection.csproj" />
+    <ProjectReference
+      Include="..\..\src\LangKey.Generator\LangKey.Generator.csproj"
+      OutputItemType="Analyzer"
+      ReferenceOutputAssembly="false"
+    />
+  </ItemGroup>
+</Project>

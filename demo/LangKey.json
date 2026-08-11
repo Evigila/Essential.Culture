@@ -1,0 +1,46 @@
+{
+  "App_Title": {
+    "en-US": "LangKey localization demo",
+    "zh-CN": "LangKey 本地化演示"
+  },
+  "Greeting": {
+    "en-US": "Hello from LangKey!",
+    "zh-CN": "你好，LangKey！"
+  },
+  "Hello_World": {
+    "en-US": "Hello World!",
+    "zh-CN": "你好，世界！"
+  },
+  "Description": {
+    "en-US": "One JSON document, strongly typed keys, and instant culture switching.",
+    "zh-CN": "一份 JSON、强类型键，以及即时的语言切换。"
+  },
+  "Current_Culture": {
+    "en-US": "Current culture: {0}",
+    "zh-CN": "当前区域性：{0}"
+  },
+  "Action_SwitchLanguage": {
+    "en-US": "Switch to Chinese",
+    "zh-CN": "切换到英文"
+  },
+  "Action_ShowGreeting": {
+    "en-US": "Show greeting",
+    "zh-CN": "显示问候语"
+  },
+  "Action_Close": {
+    "en-US": "Close",
+    "zh-CN": "关闭"
+  },
+  "Console_Menu": {
+    "en-US": "Choose an action:\n1. Switch language\n2. Print Hello World\n3. Exit",
+    "zh-CN": "请选择操作：\n1. 切换语言\n2. 输出 Hello World\n3. 退出"
+  },
+  "Console_Prompt": {
+    "en-US": "Selection: ",
+    "zh-CN": "请选择："
+  },
+  "Console_InvalidSelection": {
+    "en-US": "Please enter 1, 2, or 3.",
+    "zh-CN": "请输入 1、2 或 3。"
+  }
+}

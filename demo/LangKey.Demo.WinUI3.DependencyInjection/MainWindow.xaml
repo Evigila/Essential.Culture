@@ -1,0 +1,59 @@
+<Window x:Class="ArkheideSystem.LangKey.Demo.WinUI3Di.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="LangKey">
+  <Grid x:Name="Root" Background="#F3F4F6">
+    <Border Width="800"
+            Padding="56"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Background="White"
+            BorderBrush="#E5E7EB"
+            BorderThickness="1"
+            CornerRadius="18">
+      <StackPanel>
+        <TextBlock Text="{Binding Title}"
+                   FontFamily="Segoe UI"
+                   FontSize="34"
+                   FontWeight="SemiBold"
+                   Foreground="#111827" />
+        <TextBlock Text="{Binding Greeting}"
+                   FontFamily="Segoe UI"
+                   Margin="0,24,0,0"
+                   FontSize="24"
+                   FontWeight="SemiBold"
+                   Foreground="#1F2937" />
+        <TextBlock Text="{Binding Description}"
+                   FontFamily="Segoe UI"
+                   Margin="0,12,0,0"
+                   FontSize="16"
+                   LineHeight="26"
+                   Foreground="#4B5563"
+                   TextWrapping="Wrap" />
+        <TextBlock Text="{Binding CurrentCulture}"
+                   FontFamily="Segoe UI"
+                   Margin="0,20,0,0"
+                   FontSize="14"
+                   Foreground="#6B7280" />
+        <StackPanel Margin="0,32,0,0" Orientation="Horizontal" Spacing="12">
+          <Button Content="{Binding SwitchLanguageText}"
+                  Command="{Binding SwitchCultureCommand}"
+                  FontFamily="Segoe UI"
+                  MinWidth="180"
+                  Height="44"
+                  Padding="20,0"
+                  FontSize="14"
+                  FontWeight="SemiBold" />
+          <Button Content="{Binding ShowGreetingText}"
+                  Click="ShowGreeting_Click"
+                  FontFamily="Segoe UI"
+                  MinWidth="180"
+                  Height="44"
+                  Padding="20,0"
+                  FontSize="14"
+                  FontWeight="SemiBold" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+  </Grid>
+</Window>
