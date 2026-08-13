@@ -1,7 +1,8 @@
 <Window x:Class="ArkheideSystem.LangKey.Demo.WinUI3Di.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="LangKey.App_Title">
+        xmlns:keys="using:ArkheideSystem.LangKey.Demo.Shared"
+        Title="{x:Bind keys:LangKey.App_Title, Mode=OneTime}">
   <Grid x:Name="Root" Background="#F3F4F6">
     <Border Width="800"
             Padding="56"
@@ -12,18 +13,18 @@
             BorderThickness="1"
             CornerRadius="18">
       <StackPanel>
-        <TextBlock Text="LangKey.App_Title"
+        <TextBlock Text="{x:Bind keys:LangKey.App_Title, Mode=OneTime}"
                    FontFamily="Segoe UI"
                    FontSize="34"
                    FontWeight="SemiBold"
                    Foreground="#111827" />
-        <TextBlock Text="LangKey.Greeting"
+        <TextBlock Text="{x:Bind keys:LangKey.Greeting, Mode=OneTime}"
                    FontFamily="Segoe UI"
                    Margin="0,24,0,0"
                    FontSize="24"
                    FontWeight="SemiBold"
                    Foreground="#1F2937" />
-        <TextBlock Text="LangKey.Description"
+        <TextBlock Text="{x:Bind keys:LangKey.Description, Mode=OneTime}"
                    FontFamily="Segoe UI"
                    Margin="0,12,0,0"
                    FontSize="16"
@@ -36,7 +37,7 @@
                    FontSize="14"
                    Foreground="#6B7280" />
         <StackPanel Margin="0,32,0,0" Orientation="Horizontal" Spacing="12">
-          <Button Content="LangKey.Action_SwitchLanguage"
+          <Button Content="{x:Bind keys:LangKey.Action_SwitchLanguage, Mode=OneTime}"
                   Click="SwitchLanguage_Click"
                   FontFamily="Segoe UI"
                   MinWidth="180"
@@ -44,7 +45,7 @@
                   Padding="20,0"
                   FontSize="14"
                   FontWeight="SemiBold" />
-          <Button Content="LangKey.Action_ShowGreeting"
+          <Button Content="{x:Bind keys:LangKey.Action_ShowGreeting, Mode=OneTime}"
                   Click="ShowGreeting_Click"
                   FontFamily="Segoe UI"
                   MinWidth="180"

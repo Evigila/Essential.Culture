@@ -1,6 +1,6 @@
 # LangKey WinUI 3 + DI Demo
 
-这个示例展示 Unpackaged WinUI 3 应用如何通过专用 LangKey 适配器、DI、XAML token 和窗口跟踪实现本地化。
+这个示例展示 Unpackaged WinUI 3 应用如何通过专用 LangKey 适配器、DI、强类型 XAML 键和窗口跟踪实现本地化。
 
 ## 环境与依赖
 
@@ -56,17 +56,28 @@ window.Activate();
 
 `Attach` 必须在窗口所属 UI 线程调用。它会立即处理 Window Title 和视觉树，在文化变化后使用窗口自己的 DispatcherQueue 刷新，并在窗口关闭时自动解除跟踪；应用关闭时释放 Provider。
 
-## WinUI XAML token
+## WinUI 强类型 XAML 键
 
-[`MainWindow.xaml`](MainWindow.xaml) 直接在 WinUI 显示属性中使用稳定 token：
+项目通过 `LangKeyNamespace` 指定 Generator 输出命名空间：
 
 ```xml
-<TextBlock Text="LangKey.Greeting" />
-<Button Content="LangKey.Action_SwitchLanguage"
-        Click="SwitchLanguage_Click" />
+<LangKeyNamespace>ArkheideSystem.LangKey.Demo.Shared</LangKeyNamespace>
 ```
 
-Applicator 保存原 token，并处理 Text、Content、ContentDialog 按钮文本、Placeholder、ToolTip 和 Automation Name 等依赖属性。文化源变化后，Parser 触发 Resolver 的 `Changed`，Applicator 自动重新应用附加窗口。
+[`MainWindow.xaml`](MainWindow.xaml) 导入该命名空间，并用静态属性的 `x:Bind` 提供稳定 token：
+
+```xml
+<Window xmlns:keys="using:ArkheideSystem.LangKey.Demo.Shared"
+        Title="{x:Bind keys:LangKey.App_Title, Mode=OneTime}">
+  <TextBlock Text="{x:Bind keys:LangKey.Greeting, Mode=OneTime}" />
+  <Button Content="{x:Bind keys:LangKey.Action_SwitchLanguage, Mode=OneTime}"
+        Click="SwitchLanguage_Click" />
+</Window>
+```
+
+输入 `keys:LangKey.` 时，WinUI XAML 编辑器可以根据生成类的公开静态成员列出键，并在编译期检查成员是否存在。新增或修改 JSON 键后，如果补全尚未刷新，请先构建一次项目。
+
+显式 `Mode=OneTime` 很重要：绑定只在窗口初始化时交付 token，不会在 Applicator 写入译文后再次覆盖显示值。Applicator 保存原 token，并处理 Text、Content、ContentDialog 按钮文本、Placeholder、ToolTip 和 Automation Name 等依赖属性。文化源变化后，Parser 触发 Resolver 的 `Changed`，Applicator 自动重新应用附加窗口。
 
 需要参数的当前文化文本仍由窗口使用 Resolver 显式格式化。
 

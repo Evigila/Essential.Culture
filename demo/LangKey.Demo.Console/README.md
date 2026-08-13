@@ -70,3 +70,5 @@ dotnet run --project demo\LangKey.Demo.Console\LangKey.Demo.Console.csproj
 - 输入流结束：正常退出。
 
 这个项目适合作为 Console、Worker、服务进程或自行管理 Parser 生命周期的最小参考。
+
+Console 项目没有 XAML，因此不涉及 `x:Static` 或 `x:Bind`。输入 `GeneratedLangKey.` 时由 C# IntelliSense 直接列出 Generator 产生的键；WPF、Avalonia 和 WinUI 3 中对应的强类型 XAML 写法请参阅各自示例。

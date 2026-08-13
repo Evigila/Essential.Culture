@@ -133,6 +133,31 @@ public static class LangKey
 
 这些属性是稳定 token，不是已经翻译的字符串。把 token 交给 `ILangKeyResolver.Get` 或 `Format` 后才会得到当前文化的文本。
 
+### 在 XAML 中使用生成属性
+
+普通的 `Text="LangKey.Greeting"` 只是 `string` 字面量，XAML 编辑器无法把句点后的内容关联到 Generator 生成类。UI 项目应配置 `LangKeyNamespace`，再通过框架原生的强类型语法引用静态属性：
+
+```xml
+<!-- WPF -->
+<Window xmlns:keys="clr-namespace:MyApplication.Localization">
+  <TextBlock Text="{x:Static keys:LangKey.Greeting}" />
+</Window>
+
+<!-- Avalonia -->
+<Window xmlns:keys="using:MyApplication.Localization">
+  <TextBlock Text="{x:Static keys:LangKey.Greeting}" />
+</Window>
+
+<!-- WinUI 3 -->
+<Window xmlns:keys="using:MyApplication.Localization">
+  <TextBlock Text="{x:Bind keys:LangKey.Greeting, Mode=OneTime}" />
+</Window>
+```
+
+这样 XAML 编译器会解析实际 CLR 类型和静态成员，能够检查键是否存在，并可由编辑器提供成员补全。WinUI 明确使用 `Mode=OneTime`：静态属性只负责在初始化时提供 token，之后由 Applicator 写入译文并处理文化切换，不让绑定再次覆盖译文。
+
+Generator 的属性仍返回 `LangKey.Greeting`，而不是某一种文化的译文，因此强类型写法不会改变运行时刷新机制。新增或修改 JSON 键后，XAML 设计时构建可能尚未加载最新的 Analyzer 输出；此时先构建项目，再重新触发 IntelliSense。
+
 如果生成类名与 `ArkheideSystem.LangKey` 命名空间产生歧义，可以使用别名：
 
 ```csharp
@@ -263,13 +288,14 @@ WPF Applicator 会识别常见显示属性中的 `LangKey.*` token：
 - `DataGridColumn.Header`
 - `ItemsControl.ItemsSource` 中实现 `ILangKeyLocalizable` 的数据项
 
-XAML 可以直接写稳定 token：
+XAML 使用 `x:Static` 引用 Generator 产生的稳定 token：
 
 ```xml
-<Window Title="LangKey.App_Title">
+<Window xmlns:keys="clr-namespace:MyApplication.Localization"
+        Title="{x:Static keys:LangKey.App_Title}">
   <StackPanel>
-    <TextBlock Text="LangKey.Welcome_User" />
-    <Button Content="LangKey.Action_Save" />
+    <TextBlock Text="{x:Static keys:LangKey.Welcome_User}" />
+    <Button Content="{x:Static keys:LangKey.Action_Save}" />
   </StackPanel>
 </Window>
 ```
@@ -342,10 +368,11 @@ desktop.MainWindow = window;
 Applicator 识别 `Window.Title`、`TextBlock.Text`、Content、Header、`TextBox.PlaceholderText`、ToolTip 和 Automation Name 中的 `LangKey.*` token。HostedService 负责启动 Loaded 监听及文化变化刷新；首次显示窗口或对话框前调用 `Apply(root)`，可避免首帧出现 token。
 
 ```xml
-<Window Title="LangKey.App_Title">
+<Window xmlns:keys="using:MyApplication.Localization"
+        Title="{x:Static keys:LangKey.App_Title}">
   <StackPanel>
-    <TextBlock Text="LangKey.Greeting" />
-    <Button Content="LangKey.Action_SwitchLanguage" />
+    <TextBlock Text="{x:Static keys:LangKey.Greeting}" />
+    <Button Content="{x:Static keys:LangKey.Action_SwitchLanguage}" />
   </StackPanel>
 </Window>
 ```
@@ -376,6 +403,18 @@ await dialog.ShowAsync();
 ```
 
 Applicator 识别 Text、Content、ContentDialog 按钮文本、Placeholder、ToolTip 和 Automation Name 等 WinUI 依赖属性。明确不使用 DI 时安装 `ArkheideSystem.LangKey.WinUI.Runtime`，自行创建 Parser 和 Applicator；Applicator 释放时会解除全部窗口和文化变化订阅。
+
+WinUI XAML 使用静态属性的 `x:Bind`，不要使用不透明的 token 字符串：
+
+```xml
+<Window xmlns:keys="using:MyApplication.Localization"
+        Title="{x:Bind keys:LangKey.App_Title, Mode=OneTime}">
+  <TextBlock Text="{x:Bind keys:LangKey.Greeting, Mode=OneTime}" />
+  <Button Content="{x:Bind keys:LangKey.Action_SwitchLanguage, Mode=OneTime}" />
+</Window>
+```
+
+`Mode=OneTime` 只在初始化时把 token 写入依赖属性；`Attach` 随后将其翻译，并在文化变化后持续刷新。
 
 ## 12. 部署与打包检查
 
@@ -424,3 +463,7 @@ Avalonia 在呈现根之前调用 `Apply(root)`；WinUI 在 `Activate()` 前调�
 ### 为什么未知键直接显示 token
 
 这是刻意的诊断行为，能够让开发和测试阶段立即发现资源遗漏。
+
+### XAML 中输入 LangKey. 没有补全
+
+确认使用的是 `{x:Static keys:LangKey.}`（WPF/Avalonia）或 `{x:Bind keys:LangKey., Mode=OneTime}`（WinUI 3），而不是 `Text="LangKey."` 普通字符串；同时检查 `xmlns:keys` 是否指向 `LangKeyNamespace` 配置的生成命名空间。首次生成或修改键后先构建一次项目，让 XAML 设计时构建读取最新成员。

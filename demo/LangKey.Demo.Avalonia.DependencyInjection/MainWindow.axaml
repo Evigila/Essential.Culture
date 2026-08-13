@@ -1,9 +1,10 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ArkheideSystem.LangKey.Demo.AvaloniaDi"
+        xmlns:keys="using:ArkheideSystem.LangKey.Demo.Shared"
         x:Class="ArkheideSystem.LangKey.Demo.AvaloniaDi.MainWindow"
         x:DataType="vm:AvaloniaDemoViewModel"
-        Title="LangKey.App_Title"
+        Title="{x:Static keys:LangKey.App_Title}"
         Width="1280"
         Height="720"
         WindowStartupLocation="CenterScreen"
@@ -19,16 +20,16 @@
             BorderThickness="1"
             CornerRadius="18">
       <StackPanel>
-        <TextBlock Text="LangKey.App_Title"
+        <TextBlock Text="{x:Static keys:LangKey.App_Title}"
                    FontSize="34"
                    FontWeight="SemiBold"
                    Foreground="#111827" />
-        <TextBlock Text="LangKey.Greeting"
+        <TextBlock Text="{x:Static keys:LangKey.Greeting}"
                    Margin="0,24,0,0"
                    FontSize="24"
                    FontWeight="SemiBold"
                    Foreground="#1F2937" />
-        <TextBlock Text="LangKey.Description"
+        <TextBlock Text="{x:Static keys:LangKey.Description}"
                    Margin="0,12,0,0"
                    FontSize="16"
                    LineHeight="26"
@@ -39,14 +40,14 @@
                    FontSize="14"
                    Foreground="#6B7280" />
         <StackPanel Margin="0,32,0,0" Orientation="Horizontal" Spacing="12">
-          <Button Content="LangKey.Action_SwitchLanguage"
+          <Button Content="{x:Static keys:LangKey.Action_SwitchLanguage}"
                   Command="{Binding SwitchCultureCommand}"
                   MinWidth="180"
                   Height="44"
                   Padding="20,0"
                   FontSize="14"
                   FontWeight="SemiBold" />
-          <Button Content="LangKey.Action_ShowGreeting"
+          <Button Content="{x:Static keys:LangKey.Action_ShowGreeting}"
                   Click="ShowGreeting_Click"
                   MinWidth="180"
                   Height="44"

@@ -42,18 +42,28 @@ window.Show();
 
 应用退出时先释放 Applicator，再释放 Parser。
 
-## XAML token
+## XAML 强类型键
 
-[`MainWindow.xaml`](MainWindow.xaml) 可以直接在常见 WPF 显示属性中写 token：
+在项目文件中通过 `LangKeyNamespace` 指定生成类的命名空间：
 
 ```xml
-<Window Title="LangKey.App_Title">
-  <TextBlock Text="LangKey.Greeting" />
-  <Button Content="LangKey.Action_SwitchLanguage" />
+<LangKeyNamespace>ArkheideSystem.LangKey.Demo.WpfApp.Generated</LangKeyNamespace>
+```
+
+[`MainWindow.xaml`](MainWindow.xaml) 将这个命名空间映射为 XAML 前缀，并使用 `x:Static` 引用 Generator 生成的属性：
+
+```xml
+<Window
+  xmlns:langKey="clr-namespace:ArkheideSystem.LangKey.Demo.WpfApp.Generated"
+  Title="{x:Static langKey:LangKey.App_Title}">
+  <TextBlock Text="{x:Static langKey:LangKey.Greeting}" />
+  <Button Content="{x:Static langKey:LangKey.Action_SwitchLanguage}" />
 </Window>
 ```
 
-Applicator 会保存原 token，解析当前文化的文本，并在文化变化后重新应用。
+输入 `langKey:LangKey.` 时，XAML 编辑器可以按生成类的静态成员提供键名补全，并在编译期检查成员是否存在。首次加入或修改翻译键后，如补全列表尚未更新，请先构建一次项目，让 XAML 设计时构建读取最新的 Generator 输出。
+
+生成属性返回的仍然是 `LangKey.*` token，因此 `x:Static` 只改变 XAML 的强类型引用方式，不改变运行时本地化流程。Applicator 会保存原 token，解析当前文化的文本，并在文化变化后重新应用。
 
 需要参数的文本仍在 [`MainWindow.xaml.cs`](MainWindow.xaml.cs) 中显式格式化：
 

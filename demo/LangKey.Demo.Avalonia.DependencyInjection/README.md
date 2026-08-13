@@ -1,6 +1,6 @@
 # LangKey Avalonia + DI Demo
 
-这个示例展示 Avalonia 专用适配器如何通过 Generic Host、DI、XAML token 和视觉树刷新实现本地化。
+这个示例展示 Avalonia 专用适配器如何通过 Generic Host、DI、强类型 XAML token 和视觉树刷新实现本地化。
 
 ## 环境与依赖
 
@@ -45,16 +45,25 @@ desktop.MainWindow = window;
 
 HostedService 负责启动 Loaded 监听和文化变化刷新；应用退出时停止并释放 Host。
 
-## Avalonia XAML token
+## Avalonia 强类型 XAML 键
 
-[`MainWindow.axaml`](MainWindow.axaml) 直接在 Avalonia 显示属性中使用稳定 token：
+项目通过 `LangKeyNamespace` 指定 Generator 输出类所在的命名空间：
 
 ```xml
-<Window Title="LangKey.App_Title">
-  <TextBlock Text="LangKey.Greeting" />
-  <Button Content="LangKey.Action_SwitchLanguage" />
+<LangKeyNamespace>ArkheideSystem.LangKey.Demo.Shared</LangKeyNamespace>
+```
+
+在 [`MainWindow.axaml`](MainWindow.axaml) 中导入该命名空间，并使用 `x:Static` 引用生成属性：
+
+```xml
+<Window xmlns:keys="using:ArkheideSystem.LangKey.Demo.Shared"
+        Title="{x:Static keys:LangKey.App_Title}">
+  <TextBlock Text="{x:Static keys:LangKey.Greeting}" />
+  <Button Content="{x:Static keys:LangKey.Action_SwitchLanguage}" />
 </Window>
 ```
+
+`x:Static` 在 XAML 编译时解析 `LangKey` 生成类的公开静态属性，因此编辑器可以按 CLR 成员提供补全，并能在键不存在时给出编译错误。生成属性的值仍然是稳定的 `LangKey.*` token，所以不会改变 Applicator 的运行机制。
 
 Applicator 会保存原 token，并处理 Window Title、TextBlock Text、Content、Header、Placeholder、ToolTip 和 Automation Name 等常见属性。文化变化后，它在 Avalonia UI 线程重新扫描活动窗口；动态加载的控件也会通过 Loaded 处理。
 
@@ -69,7 +78,7 @@ ViewModel 只为这个动态格式化属性响应 `Changed`；无需为全部静
 
 ```xml
 <TextBlock Text="{Binding CurrentCulture}" />
-<Button Content="LangKey.Action_SwitchLanguage"
+<Button Content="{x:Static keys:LangKey.Action_SwitchLanguage}"
         Command="{Binding SwitchCultureCommand}" />
 ```
 
@@ -85,7 +94,7 @@ ViewModel 只为这个动态格式化属性响应 `Changed`；无需为全部静
 问候按钮显示 Avalonia 模态窗口 [`GreetingDialog.axaml`](GreetingDialog.axaml)。显示前调用 `applicator.Apply(dialog)`，保证首帧已经完成翻译。弹窗：
 
 - 相对主窗口居中。
-- 标题、正文、关闭按钮都使用 `LangKey.*` token，并由同一个 Applicator 解析。
+- 标题、正文、关闭按钮都通过 `x:Static` 引用生成的 `LangKey` 属性，并由同一个 Applicator 解析。
 - 使用直接根布局，不额外嵌套 Border。
 
 [`App.axaml`](App.axaml) 在 FluentTheme 后添加全局 Button 内容居中样式。

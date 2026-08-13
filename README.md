@@ -10,6 +10,7 @@ LangKey 是一个面向 .NET 的 JSON 本地化组件。
 
 - 使用单个 `LangKey.json` 管理全部文化。
 - 通过 Source Generator 生成强类型资源键。
+- WPF/Avalonia 使用 `x:Static`、WinUI 3 使用 `x:Bind`，让 XAML 获得键名补全和编译期检查。
 - 支持运行时文化切换、父文化查找、fallback 和复合格式化。
 - 提供只读的 `ILangKeyResolver` 与可变的 `ILangKeyParser`。
 - Core 自动携带 Source Generator，并按约定识别项目根目录的 `LangKey.json`。
@@ -91,6 +92,20 @@ Console.WriteLine(parser.Format(GeneratedLangKey.Greeting, "LangKey"));
 parser.Current = "zh-CN";
 Console.WriteLine(parser.Format(GeneratedLangKey.Greeting, "LangKey"));
 ```
+
+在 XAML 中不要再把键写成不透明的字符串。映射生成命名空间后，WPF 与 Avalonia 使用静态成员引用：
+
+```xml
+<TextBlock Text="{x:Static keys:LangKey.Greeting}" />
+```
+
+WinUI 3 使用一次性强类型绑定：
+
+```xml
+<TextBlock Text="{x:Bind keys:LangKey.Greeting, Mode=OneTime}" />
+```
+
+生成属性返回的仍是稳定 token，框架 Applicator 会解析当前文化并在语言变化后刷新。首次添加或修改键后，如果 XAML IntelliSense 尚未更新，请先构建一次项目。
 
 ## 文档与示例
 

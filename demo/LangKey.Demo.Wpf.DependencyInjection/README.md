@@ -71,6 +71,29 @@ cultureSource.Toggle();
 
 XAML token 和格式化方式分别见 [`MainWindow.xaml`](MainWindow.xaml) 与 [`MainWindow.xaml.cs`](MainWindow.xaml.cs)。
 
+## XAML 强类型键
+
+项目通过 `LangKeyNamespace` 指定 Generator 输出命名空间：
+
+```xml
+<LangKeyNamespace>ArkheideSystem.LangKey.Demo.WpfDi.Generated</LangKeyNamespace>
+```
+
+在 XAML 中映射该 CLR 命名空间，并用 `x:Static` 引用生成属性：
+
+```xml
+<Window
+  xmlns:langKey="clr-namespace:ArkheideSystem.LangKey.Demo.WpfDi.Generated"
+  Title="{x:Static langKey:LangKey.App_Title}">
+  <TextBlock Text="{x:Static langKey:LangKey.Greeting}" />
+  <Button Content="{x:Static langKey:LangKey.Action_SwitchLanguage}" />
+</Window>
+```
+
+输入 `langKey:LangKey.` 时，XAML 编辑器可以按生成类的静态成员提供键名补全和编译期检查。新增或修改翻译键后，如补全未及时刷新，请先构建一次项目以更新 XAML 设计时生成信息。
+
+`x:Static` 得到的值仍是 `LangKey.*` token；WPF Applicator 继续负责保存 token、解析当前文化，并在语言变化时重新应用译文。DI 只改变 Parser 和 Applicator 的创建及生命周期，不改变 XAML 的写法。
+
 ## 运行
 
 ```powershell

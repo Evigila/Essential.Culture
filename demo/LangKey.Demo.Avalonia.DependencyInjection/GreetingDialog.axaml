@@ -1,7 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:keys="using:ArkheideSystem.LangKey.Demo.Shared"
         x:Class="ArkheideSystem.LangKey.Demo.AvaloniaDi.GreetingDialog"
-        Title="LangKey.App_Title"
+        Title="{x:Static keys:LangKey.App_Title}"
         Width="440"
         SizeToContent="Height"
         CanResize="False"
@@ -10,12 +11,12 @@
         Background="White"
         FontFamily="Segoe UI">
   <StackPanel Margin="32" Spacing="24">
-    <TextBlock Text="LangKey.Greeting"
+    <TextBlock Text="{x:Static keys:LangKey.Greeting}"
                FontSize="20"
                FontWeight="SemiBold"
                Foreground="#1F2937"
                TextWrapping="Wrap" />
-    <Button Content="LangKey.Action_Close"
+    <Button Content="{x:Static keys:LangKey.Action_Close}"
             Click="Close_Click"
             MinWidth="120"
             Height="40"
