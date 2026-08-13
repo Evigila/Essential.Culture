@@ -1,8 +1,10 @@
 using ArkheideSystem.LangKey.Demo.Shared;
+using ArkheideSystem.LangKey.WinUI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.Graphics;
+using DemoLangKey = ArkheideSystem.LangKey.Demo.Shared.LangKey;
 
 namespace ArkheideSystem.LangKey.Demo.WinUI3Di;
 
@@ -10,13 +12,21 @@ public sealed partial class MainWindow : Window
 {
     private const int WindowWidth = 1280;
     private const int WindowHeight = 720;
-    private readonly LocalizedDemoViewModel viewModel;
+    private readonly DemoCultureSource cultureSource;
+    private readonly global::ArkheideSystem.LangKey.ILangKeyResolver resolver;
+    private readonly ILangKeyWinUIApplicator applicator;
 
-    public MainWindow(LocalizedDemoViewModel viewModel)
+    public MainWindow(
+        DemoCultureSource cultureSource,
+        global::ArkheideSystem.LangKey.ILangKeyResolver resolver,
+        ILangKeyWinUIApplicator applicator
+    )
     {
         InitializeComponent();
-        this.viewModel = viewModel;
-        Root.DataContext = viewModel;
+        this.cultureSource = cultureSource;
+        this.resolver = resolver;
+        this.applicator = applicator;
+        UpdateCultureText();
         ResizeAndCenter();
     }
 
@@ -44,16 +54,26 @@ public sealed partial class MainWindow : Window
         );
     }
 
+    private void SwitchLanguage_Click(object sender, RoutedEventArgs e)
+    {
+        cultureSource.Toggle();
+        UpdateCultureText();
+    }
+
+    private void UpdateCultureText() =>
+        CurrentCultureText.Text = resolver.Format(DemoLangKey.Current_Culture, resolver.Current);
+
     private async void ShowGreeting_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new ContentDialog
         {
-            Title = viewModel.Title,
-            Content = viewModel.Greeting,
-            CloseButtonText = viewModel.CloseText,
+            Title = DemoLangKey.App_Title,
+            Content = DemoLangKey.Greeting,
+            CloseButtonText = DemoLangKey.Action_Close,
             XamlRoot = Root.XamlRoot,
         };
 
+        applicator.Apply(dialog);
         await dialog.ShowAsync();
     }
 }

@@ -1,6 +1,6 @@
-namespace ArkheideSystem.LangKey.Wpf;
+namespace ArkheideSystem.LangKey;
 
-/// <summary>Allows a data item to refresh values that originate from LangKey tokens.</summary>
+/// <summary>Allows a framework data item to refresh values that originate from LangKey tokens.</summary>
 public interface ILangKeyLocalizable
 {
     /// <summary>Refreshes the item's localized values through the supplied resolver.</summary>

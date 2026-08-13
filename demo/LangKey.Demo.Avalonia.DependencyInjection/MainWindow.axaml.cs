@@ -1,4 +1,4 @@
-using ArkheideSystem.LangKey.Demo.Shared;
+using ArkheideSystem.LangKey.Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
@@ -6,25 +6,27 @@ namespace ArkheideSystem.LangKey.Demo.AvaloniaDi;
 
 public partial class MainWindow : Window
 {
-    private LocalizedDemoViewModel? viewModel;
+    private readonly ILangKeyAvaloniaApplicator? applicator;
 
     public MainWindow()
     {
         InitializeComponent();
     }
 
-    public MainWindow(LocalizedDemoViewModel viewModel)
+    public MainWindow(
+        AvaloniaDemoViewModel viewModel,
+        ILangKeyAvaloniaApplicator applicator
+    )
         : this()
     {
-        this.viewModel = viewModel;
+        this.applicator = applicator;
         DataContext = viewModel;
     }
 
     private async void ShowGreeting_Click(object? sender, RoutedEventArgs e)
     {
-        if (viewModel is not null)
-        {
-            await new GreetingDialog(viewModel).ShowDialog(this);
-        }
+        var dialog = new GreetingDialog();
+        applicator?.Apply(dialog);
+        await dialog.ShowDialog(this);
     }
 }

@@ -92,7 +92,7 @@ public sealed class LangKeyWpfApplicator : ILangKeyWpfApplicator, IDisposable
     }
 
     /// <summary>Stops automatic handling without permanently disposing this applicator.</summary>
-    internal void Stop() => StopCore();
+    public void Stop() => StopCore();
 
     private void StopCore()
     {

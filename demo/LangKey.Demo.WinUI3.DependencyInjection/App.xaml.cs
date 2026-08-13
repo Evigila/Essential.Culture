@@ -1,4 +1,5 @@
 using ArkheideSystem.LangKey.Demo.Shared;
+using ArkheideSystem.LangKey.WinUI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 
@@ -15,8 +16,7 @@ public partial class App : Application
 
         var collection = new ServiceCollection();
         collection.AddSingleton<DemoCultureSource>();
-        collection.AddLangKey<DemoCultureSource>("LangKey.json");
-        collection.AddSingleton<LocalizedDemoViewModel>();
+        collection.AddLangKeyWinUI<DemoCultureSource>("LangKey.json");
         collection.AddSingleton<MainWindow>();
         services = collection.BuildServiceProvider();
     }
@@ -24,6 +24,7 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         window = services.GetRequiredService<MainWindow>();
+        services.GetRequiredService<ILangKeyWinUIApplicator>().Attach(window);
         window.Closed += Window_Closed;
         window.Activate();
     }

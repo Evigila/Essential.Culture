@@ -8,4 +8,11 @@
     <PackageId>ArkheideSystem.LangKey</PackageId>
     <Description>Strongly keyed, culture-aware JSON localization runtime.</Description>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference
+      Include="..\LangKey.Generator\LangKey.Generator.csproj"
+      Private="false"
+      PrivateAssets="none" />
+  </ItemGroup>
 </Project>

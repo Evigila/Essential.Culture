@@ -1,9 +1,9 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:ArkheideSystem.LangKey.Demo.Shared"
+        xmlns:vm="using:ArkheideSystem.LangKey.Demo.AvaloniaDi"
         x:Class="ArkheideSystem.LangKey.Demo.AvaloniaDi.MainWindow"
-        x:DataType="vm:LocalizedDemoViewModel"
-        Title="{Binding Title}"
+        x:DataType="vm:AvaloniaDemoViewModel"
+        Title="LangKey.App_Title"
         Width="1280"
         Height="720"
         WindowStartupLocation="CenterScreen"
@@ -19,16 +19,16 @@
             BorderThickness="1"
             CornerRadius="18">
       <StackPanel>
-        <TextBlock Text="{Binding Title}"
+        <TextBlock Text="LangKey.App_Title"
                    FontSize="34"
                    FontWeight="SemiBold"
                    Foreground="#111827" />
-        <TextBlock Text="{Binding Greeting}"
+        <TextBlock Text="LangKey.Greeting"
                    Margin="0,24,0,0"
                    FontSize="24"
                    FontWeight="SemiBold"
                    Foreground="#1F2937" />
-        <TextBlock Text="{Binding Description}"
+        <TextBlock Text="LangKey.Description"
                    Margin="0,12,0,0"
                    FontSize="16"
                    LineHeight="26"
@@ -39,14 +39,14 @@
                    FontSize="14"
                    Foreground="#6B7280" />
         <StackPanel Margin="0,32,0,0" Orientation="Horizontal" Spacing="12">
-          <Button Content="{Binding SwitchLanguageText}"
+          <Button Content="LangKey.Action_SwitchLanguage"
                   Command="{Binding SwitchCultureCommand}"
                   MinWidth="180"
                   Height="44"
                   Padding="20,0"
                   FontSize="14"
                   FontWeight="SemiBold" />
-          <Button Content="{Binding ShowGreetingText}"
+          <Button Content="LangKey.Action_ShowGreeting"
                   Click="ShowGreeting_Click"
                   MinWidth="180"
                   Height="44"

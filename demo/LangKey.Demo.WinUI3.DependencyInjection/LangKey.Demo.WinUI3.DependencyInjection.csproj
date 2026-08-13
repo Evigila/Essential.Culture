@@ -20,15 +20,10 @@
     <AdditionalFiles Include="..\LangKey.json" Link="LangKey.json" />
     <None Include="..\LangKey.json" Link="LangKey.json" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="..\Shared\DemoCultureSource.cs" Link="Shared\DemoCultureSource.cs" />
-    <Compile Include="..\Shared\DelegateCommand.cs" Link="Shared\DelegateCommand.cs" />
-    <Compile
-      Include="..\Shared\LocalizedDemoViewModel.cs"
-      Link="Shared\LocalizedDemoViewModel.cs"
-    />
     <CompilerVisibleProperty Include="LangKeyNamespace" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.3.1" />
-    <ProjectReference Include="..\..\src\LangKey.DependencyInjection\LangKey.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\src\LangKey.WinUI\LangKey.WinUI.csproj" />
     <ProjectReference
       Include="..\..\src\LangKey.Generator\LangKey.Generator.csproj"
       OutputItemType="Analyzer"

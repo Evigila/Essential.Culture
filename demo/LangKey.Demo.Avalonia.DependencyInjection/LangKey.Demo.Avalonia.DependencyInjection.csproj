@@ -18,8 +18,8 @@
     <PackageReference Include="Avalonia" Version="12.1.0" />
     <PackageReference Include="Avalonia.Desktop" Version="12.1.0" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
-    <ProjectReference Include="..\..\src\LangKey.DependencyInjection\LangKey.DependencyInjection.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.8" />
+    <ProjectReference Include="..\..\src\LangKey.Avalonia\LangKey.Avalonia.csproj" />
     <ProjectReference Include="..\..\src\LangKey.Generator\LangKey.Generator.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />

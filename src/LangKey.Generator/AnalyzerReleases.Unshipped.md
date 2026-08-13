@@ -5,3 +5,4 @@
 
 Rule ID | Category | Severity | Notes
 --------|----------|----------|------
+LANGKEY004 | LangKey | Error | Reports invalid LangKeyGeneratorEnabled values.

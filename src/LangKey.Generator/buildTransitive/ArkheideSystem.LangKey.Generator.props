@@ -1,5 +1,11 @@
 <Project>
+  <PropertyGroup>
+    <LangKeyGeneratorEnabled Condition="'$(LangKeyGeneratorEnabled)' == ''">auto</LangKeyGeneratorEnabled>
+    <LangKeyAutoInclude Condition="'$(LangKeyAutoInclude)' == ''">true</LangKeyAutoInclude>
+  </PropertyGroup>
+
   <ItemGroup>
     <CompilerVisibleProperty Include="LangKeyNamespace" />
+    <CompilerVisibleProperty Include="LangKeyGeneratorEnabled" />
   </ItemGroup>
 </Project>

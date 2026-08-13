@@ -1,0 +1,35 @@
+<Project>
+  <Target
+    Name="LangKeyPrepareDefaultDocument"
+    BeforeTargets="GenerateMSBuildEditorConfigFile"
+    Condition="'$(LangKeyAutoInclude)' != 'false' and Exists('$(MSBuildProjectDirectory)\LangKey.json')">
+    <ItemGroup>
+      <_LangKeyExplicitDocument
+        Include="@(AdditionalFiles)"
+        Condition="'%(AdditionalFiles.Filename)%(AdditionalFiles.Extension)' == 'LangKey.json'" />
+      <AdditionalFiles
+        Include="$(MSBuildProjectDirectory)\LangKey.json"
+        Condition="'@(_LangKeyExplicitDocument)' == ''" />
+    </ItemGroup>
+  </Target>
+
+  <Target
+    Name="LangKeyCopyDefaultDocumentToOutput"
+    AfterTargets="Build"
+    Condition="'$(LangKeyAutoInclude)' != 'false' and Exists('$(MSBuildProjectDirectory)\LangKey.json')">
+    <Copy
+      SourceFiles="$(MSBuildProjectDirectory)\LangKey.json"
+      DestinationFiles="$(TargetDir)LangKey.json"
+      SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target
+    Name="LangKeyCopyDefaultDocumentToPublish"
+    AfterTargets="Publish"
+    Condition="'$(LangKeyAutoInclude)' != 'false' and Exists('$(MSBuildProjectDirectory)\LangKey.json')">
+    <Copy
+      SourceFiles="$(MSBuildProjectDirectory)\LangKey.json"
+      DestinationFiles="$(PublishDir)LangKey.json"
+      SkipUnchangedFiles="true" />
+  </Target>
+</Project>

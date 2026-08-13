@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>ArkheideSystem.LangKey.WinUI</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageId>ArkheideSystem.LangKey.WinUI</PackageId>
+    <Description>Dependency injection registration and automatic WinUI 3 localization for LangKey.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LangKey.DependencyInjection\LangKey.DependencyInjection.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\LangKey.WinUI.Runtime\LangKey.WinUI.Runtime.csproj" PrivateAssets="none" />
+  </ItemGroup>
+</Project>

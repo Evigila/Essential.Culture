@@ -9,6 +9,9 @@ public interface ILangKeyWpfApplicator
     /// <summary>Starts automatic Loaded handling and culture-change refresh on a dispatcher.</summary>
     void Start(Dispatcher dispatcher);
 
+    /// <summary>Stops automatic handling without disposing the applicator.</summary>
+    void Stop();
+
     /// <summary>Applies localization to a WPF object tree immediately.</summary>
     void Apply(DependencyObject root);
 }
