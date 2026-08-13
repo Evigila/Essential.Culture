@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -15,28 +14,60 @@ public sealed class LangKeyWinUIApplicator : ILangKeyWinUIApplicator, IDisposabl
 {
     private static readonly PropertyRule[] LocalizableProperties =
     [
-        new(TextBlock.TextProperty, static target => target is TextBlock),
-        new(ContentControl.ContentProperty, static target => target is ContentControl),
-        new(ContentDialog.TitleProperty, static target => target is ContentDialog),
-        new(ContentDialog.PrimaryButtonTextProperty, static target => target is ContentDialog),
-        new(ContentDialog.SecondaryButtonTextProperty, static target => target is ContentDialog),
-        new(ContentDialog.CloseButtonTextProperty, static target => target is ContentDialog),
-        new(TextBox.PlaceholderTextProperty, static target => target is TextBox),
-        new(PasswordBox.PlaceholderTextProperty, static target => target is PasswordBox),
-        new(RichEditBox.PlaceholderTextProperty, static target => target is RichEditBox),
-        new(AutoSuggestBox.PlaceholderTextProperty, static target => target is AutoSuggestBox),
-        new(ToolTipService.ToolTipProperty, static _ => true),
-        new(AutomationProperties.NameProperty, static _ => true),
+        new("TextBlockText", TextBlock.TextProperty, static target => target is TextBlock),
+        new(
+            "ContentControlContent",
+            ContentControl.ContentProperty,
+            static target => target is ContentControl
+        ),
+        new(
+            "ContentDialogTitle",
+            ContentDialog.TitleProperty,
+            static target => target is ContentDialog
+        ),
+        new(
+            "ContentDialogPrimaryButtonText",
+            ContentDialog.PrimaryButtonTextProperty,
+            static target => target is ContentDialog
+        ),
+        new(
+            "ContentDialogSecondaryButtonText",
+            ContentDialog.SecondaryButtonTextProperty,
+            static target => target is ContentDialog
+        ),
+        new(
+            "ContentDialogCloseButtonText",
+            ContentDialog.CloseButtonTextProperty,
+            static target => target is ContentDialog
+        ),
+        new(
+            "TextBoxPlaceholder",
+            TextBox.PlaceholderTextProperty,
+            static target => target is TextBox
+        ),
+        new(
+            "PasswordBoxPlaceholder",
+            PasswordBox.PlaceholderTextProperty,
+            static target => target is PasswordBox
+        ),
+        new(
+            "RichEditBoxPlaceholder",
+            RichEditBox.PlaceholderTextProperty,
+            static target => target is RichEditBox
+        ),
+        new(
+            "AutoSuggestBoxPlaceholder",
+            AutoSuggestBox.PlaceholderTextProperty,
+            static target => target is AutoSuggestBox
+        ),
+        new("ToolTip", ToolTipService.ToolTipProperty, static _ => true),
+        new("AutomationName", AutomationProperties.NameProperty, static _ => true),
     ];
 
     private readonly ILangKeyResolver resolver;
     private readonly Lock gate = new();
     private readonly Dictionary<Window, WindowRegistration> windows =
         new(ReferenceEqualityComparer.Instance);
-    private readonly ConditionalWeakTable<
-        DependencyObject,
-        Dictionary<DependencyProperty, TrackedValue>
-    > resourceKeys = new();
     private bool isDisposed;
 
     /// <summary>Creates a WinUI applicator backed by a LangKey resolver.</summary>
@@ -281,35 +312,51 @@ public sealed class LangKeyWinUIApplicator : ILangKeyWinUIApplicator, IDisposabl
             var localValue = target.ReadLocalValue(property);
             if (localValue is not string value)
             {
+                ClearTrackedValue(target, rule);
                 continue;
             }
 
-            var values = resourceKeys.GetOrCreateValue(target);
-            if (!values.TryGetValue(property, out var tracked))
+            var key = target.GetValue(rule.KeyProperty) as string;
+            var lastResolved = target.GetValue(rule.LastResolvedProperty) as string;
+            if (key is not null && !resolver.Contains(key))
+            {
+                ClearTrackedValue(target, rule);
+                key = null;
+                lastResolved = null;
+            }
+
+            if (key is null)
             {
                 if (!resolver.Contains(value))
                 {
                     continue;
                 }
 
-                tracked = new TrackedValue(value, value);
-                values.Add(property, tracked);
+                key = value;
+                target.SetValue(rule.KeyProperty, key);
             }
-            else if (!string.Equals(value, tracked.LastResolved, StringComparison.Ordinal))
+            else if (!string.Equals(value, lastResolved, StringComparison.Ordinal))
             {
                 if (!resolver.Contains(value))
                 {
-                    values.Remove(property);
+                    ClearTrackedValue(target, rule);
                     continue;
                 }
 
-                tracked.Key = value;
+                key = value;
+                target.SetValue(rule.KeyProperty, key);
             }
 
-            var resolved = resolver.Get(tracked.Key);
-            tracked.LastResolved = resolved;
+            var resolved = resolver.Get(key);
+            target.SetValue(rule.LastResolvedProperty, resolved);
             target.SetValue(property, resolved);
         }
+    }
+
+    private static void ClearTrackedValue(DependencyObject target, PropertyRule rule)
+    {
+        target.ClearValue(rule.KeyProperty);
+        target.ClearValue(rule.LastResolvedProperty);
     }
 
     private static void EnsureDispatcherAccess(DispatcherQueue dispatcherQueue, string operation)
@@ -340,8 +387,36 @@ public sealed class LangKeyWinUIApplicator : ILangKeyWinUIApplicator, IDisposabl
         public string LastResolved { get; set; } = lastResolved;
     }
 
-    private sealed record PropertyRule(
-        DependencyProperty Property,
-        Func<DependencyObject, bool> AppliesTo
-    );
+    private sealed class PropertyRule
+    {
+        public PropertyRule(
+            string name,
+            DependencyProperty property,
+            Func<DependencyObject, bool> appliesTo
+        )
+        {
+            Property = property;
+            AppliesTo = appliesTo;
+            KeyProperty = DependencyProperty.RegisterAttached(
+                $"{name}LangKey",
+                typeof(string),
+                typeof(LangKeyWinUIApplicator),
+                new PropertyMetadata(null)
+            );
+            LastResolvedProperty = DependencyProperty.RegisterAttached(
+                $"{name}LastResolved",
+                typeof(string),
+                typeof(LangKeyWinUIApplicator),
+                new PropertyMetadata(null)
+            );
+        }
+
+        public DependencyProperty Property { get; }
+
+        public Func<DependencyObject, bool> AppliesTo { get; }
+
+        public DependencyProperty KeyProperty { get; }
+
+        public DependencyProperty LastResolvedProperty { get; }
+    }
 }
