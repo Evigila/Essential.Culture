@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Arkheide.Essential.Culture.Avalonia</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageId>Arkheide.Essential.Culture.Avalonia</PackageId>
+    <Description>Automatic Avalonia visual-tree localization for Arkheide.Essential.Culture.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.0" />
+    <ProjectReference Include="..\Arkheide.Essential.Culture\Arkheide.Essential.Culture.csproj" PrivateAssets="none" />
+  </ItemGroup>
+</Project>

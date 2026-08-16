@@ -1,0 +1,27 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:culture="using:Arkheide.Essential.Culture"
+        x:Class="Arkheide.Essential.Culture.Demo.Avalonia.GreetingDialog"
+        Title="{x:Static culture:Key.App_Title}"
+        Width="440"
+        SizeToContent="Height"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="White"
+        FontFamily="Segoe UI">
+  <StackPanel Margin="32" Spacing="24">
+    <TextBlock Text="{x:Static culture:Key.Greeting}"
+               FontSize="20"
+               FontWeight="SemiBold"
+               Foreground="#1F2937"
+               TextWrapping="Wrap" />
+    <Button Content="{x:Static culture:Key.Action_Close}"
+            Click="Close_Click"
+            MinWidth="120"
+            Height="40"
+            Padding="18,0"
+            FontSize="14"
+            HorizontalAlignment="Right" />
+  </StackPanel>
+</Window>

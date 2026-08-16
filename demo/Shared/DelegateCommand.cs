@@ -1,6 +1,6 @@
 using System.Windows.Input;
 
-namespace ArkheideSystem.LangKey.Demo.Shared;
+namespace Arkheide.Essential.Culture.Demo.Shared;
 
 public sealed class DelegateCommand(Action execute) : ICommand
 {

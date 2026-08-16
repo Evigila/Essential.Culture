@@ -1,12 +1,12 @@
 <Project>
   <PropertyGroup>
     <VersionPrefix>1.0.0</VersionPrefix>
-    <Authors>ArkheideSystem</Authors>
-    <Company>ArkheideSystem</Company>
+    <Authors>Arkheide</Authors>
+    <Company>Arkheide</Company>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageProjectUrl>https://github.com/Evigila/LangKey</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/Evigila/LangKey.git</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/Evigila/Arkheide.Essential.Culture</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Evigila/Arkheide.Essential.Culture.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageOutputPath>$(MSBuildThisFileDirectory)artifacts\packages</PackageOutputPath>
     <Deterministic>true</Deterministic>

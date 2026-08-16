@@ -1,63 +1,42 @@
-# LangKey
+# Arkheide.Essential.Culture
 
-LangKey 是一个面向 .NET 的 JSON 本地化组件。
-
-使用单一的JSON文件统一管理文本键，并提供运行时解析、文化切换、格式化等能力。
-
-支持Console、WPF、Avalonia、WinUI 3。
+`Arkheide.Essential.Culture` 是一个面向 .NET 的 JSON 文本本地化组件。它使用一份 `Culture.json` 管理全部文化，通过 Source Generator 生成强类型键，并为 WPF、Avalonia 和 WinUI 3 提供运行时界面刷新。
 
 ## 功能
 
-- 使用单个 `LangKey.json` 管理全部文化。
-- 通过 Source Generator 生成强类型资源键。
-- WPF/Avalonia 使用 `x:Static`、WinUI 3 使用 `x:Bind`，让 XAML 获得键名补全和编译期检查。
-- 支持运行时文化切换、父文化查找、fallback 和复合格式化。
-- 提供只读的 `ILangKeyResolver` 与可变的 `ILangKeyParser`。
-- Core 自动携带 Source Generator，并按约定识别项目根目录的 `LangKey.json`。
-- 提供 Microsoft.Extensions.DependencyInjection 注册入口。
-- 为 WPF、Avalonia 和 WinUI 3 分别提供自动应用与文化切换刷新。
-- 通过 `ILangKeyCultureSource` 接入自定义文化来源。
+- 使用单个 `Culture.json` 管理资源键、文化和格式化文本。
+- 生成 `Arkheide.Essential.Culture.Key` 静态属性，为 C# 和 XAML 提供强类型键与编译期检查。
+- 通过 `Localizer.Parse(...)` 解析当前文化文本，通过 `Localizer.Current` 切换文化和监听变化。
+- 支持父文化查找、`en-US` fallback 和复合格式化。
+- WPF、Avalonia 和 WinUI 3 Applicator 会保存原始 token，并在文化变化后重新应用译文。
+- 默认从应用输出目录懒加载 `Culture.json`；核心无需显式初始化或清理。
 
 ## 包
 
+公开包只有以下五个：
+
 | 包 | 用途 | 目标框架 |
 | --- | --- | --- |
-| `ArkheideSystem.LangKey` | Parser、Resolver；自动传递 Generator | `net10.0` |
-| `ArkheideSystem.LangKey.Generator` | 从 `LangKey.json` 生成强类型 `LangKey` 类；通常无需单独安装 | `netstandard2.0` Analyzer |
-| `ArkheideSystem.LangKey.DependencyInjection` | `AddLangKey` 扩展方法与 DI 生命周期；自动传递 Core 和 Generator | `net10.0` |
-| `ArkheideSystem.LangKey.Wpf` | WPF 自动应用、HostedService 与 DI；默认入口 | `net10.0-windows` |
-| `ArkheideSystem.LangKey.Wpf.Runtime` | 不使用 DI 时的 WPF Applicator | `net10.0-windows` |
-| `ArkheideSystem.LangKey.Avalonia` | Avalonia 自动应用、HostedService 与 DI；默认入口 | `net10.0` |
-| `ArkheideSystem.LangKey.Avalonia.Runtime` | 不使用 DI 时的 Avalonia Applicator | `net10.0` |
-| `ArkheideSystem.LangKey.WinUI` | WinUI 3 自动应用与 DI；默认入口 | `net10.0-windows10.0.19041.0` |
-| `ArkheideSystem.LangKey.WinUI.Runtime` | 不使用 DI 时的 WinUI 3 Applicator | `net10.0-windows10.0.19041.0` |
+| `Arkheide.Essential.Culture` | 核心解析、文化状态与 `Localizer` 静态门面 | `net10.0` |
+| `Arkheide.Essential.Culture.Generator` | 从 `Culture.json` 生成强类型 `Arkheide.Essential.Culture.Key`；通常无需单独安装 | `netstandard2.0` Analyzer |
+| `Arkheide.Essential.Culture.Wpf` | WPF 视觉树本地化 Applicator | `net10.0-windows` |
+| `Arkheide.Essential.Culture.Avalonia` | Avalonia 视觉树本地化 Applicator | `net10.0` |
+| `Arkheide.Essential.Culture.WinUI` | WinUI 3 窗口与视觉树本地化 Applicator | `net10.0-windows10.0.19041.0` |
 
-通常选择：
-
-- Console、服务或手动管理生命周期：`ArkheideSystem.LangKey`。
-- 通用 DI：`ArkheideSystem.LangKey.DependencyInjection`。
-- WPF：`ArkheideSystem.LangKey.Wpf`。
-- Avalonia：`ArkheideSystem.LangKey.Avalonia`。
-- WinUI 3：`ArkheideSystem.LangKey.WinUI`。
-- UI 应用明确不使用 DI：安装对应的 `.Runtime` 包。
-
-三个默认 UI 包都会自动获得 Core、DI 和 Generator。Generator 是编译期 Analyzer，不会成为应用的运行时程序集依赖。
+框架包都会传递 Core，Core 再传递 Generator。Generator 只参与编译，不会成为应用的运行时程序集依赖。
 
 ```powershell
-dotnet add package ArkheideSystem.LangKey.Wpf
-dotnet add package ArkheideSystem.LangKey.Avalonia
-dotnet add package ArkheideSystem.LangKey.WinUI
+dotnet add package Arkheide.Essential.Culture
+dotnet add package Arkheide.Essential.Culture.Wpf
+dotnet add package Arkheide.Essential.Culture.Avalonia
+dotnet add package Arkheide.Essential.Culture.WinUI
 ```
+
+普通 .NET 应用只安装 Core；UI 应用直接安装对应框架包。
 
 ## 快速开始
 
-普通 .NET 应用只需安装 Core：
-
-```powershell
-dotnet add package ArkheideSystem.LangKey
-```
-
-在项目根目录创建 `LangKey.json`：
+在应用项目根目录创建 `Culture.json`：
 
 ```json
 {
@@ -68,55 +47,92 @@ dotnet add package ArkheideSystem.LangKey
 }
 ```
 
-NuGet 包会自动把项目根目录的 `LangKey.json` 交给 Generator，并在构建和发布时复制到输出目录。通常只需指定生成类的命名空间：
+NuGet 包会自动把该文件交给 Generator，并在构建和发布时复制到输出目录。Generator 默认产生：
+
+```csharp
+namespace Arkheide.Essential.Culture;
+
+public static class Key
+{
+    public static string Greeting => "Key.Greeting";
+}
+```
+
+生成属性返回的是稳定 token，不是译文。应用通过静态门面解析和切换文化：
+
+```csharp
+using Arkheide.Essential.Culture;
+using GeneratedKey = global::Arkheide.Essential.Culture.Key;
+
+Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting, "Arkheide.Essential.Culture"));
+
+Localizer.Current.SetCulture("zh-CN");
+Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting, "Arkheide.Essential.Culture"));
+```
+
+`Localizer.Parse(token)` 解析无参数文本；`Localizer.Parse(token, args...)` 在当前文化下执行复合格式化。`Localizer.Current` 提供 `Culture`、`AvailableCultures`、`SetCulture(...)` 和 `Changed`。第一次访问时会从 `AppContext.BaseDirectory` 懒加载 `Culture.json`，默认文化与 fallback 均为 `en-US`。
+
+如需覆盖生成类型所在命名空间，可在项目中设置：
 
 ```xml
 <PropertyGroup>
-  <LangKeyNamespace>MyApplication.Localization</LangKeyNamespace>
+  <ArkheideEssentialCultureNamespace>MyApplication.Localization</ArkheideEssentialCultureNamespace>
 </PropertyGroup>
 ```
 
-Generator 默认使用 `auto` 模式：没有 `LangKey.json` 时静默跳过，存在一份时生成，多于一份时报错。可使用 `<LangKeyGeneratorEnabled>true</LangKeyGeneratorEnabled>` 开启严格模式，或设为 `false` 完全关闭；使用 `<LangKeyAutoInclude>false</LangKeyAutoInclude>` 可关闭根目录文件的自动包含与复制。
+这只改变生成类型的 CLR 地址，属性值仍是稳定的 `Key.*` token。
 
-然后创建 Parser 并使用生成的 token：
+## XAML 强类型键
 
-```csharp
-using ArkheideSystem.LangKey;
-using GeneratedLangKey = MyApplication.Localization.LangKey;
-
-var path = Path.Combine(AppContext.BaseDirectory, "LangKey.json");
-using var parser = new LangKeyParser(path, "en-US");
-
-Console.WriteLine(parser.Format(GeneratedLangKey.Greeting, "LangKey"));
-
-parser.Current = "zh-CN";
-Console.WriteLine(parser.Format(GeneratedLangKey.Greeting, "LangKey"));
-```
-
-在 XAML 中不要再把键写成不透明的字符串。映射生成命名空间后，WPF 与 Avalonia 使用静态成员引用：
+WPF 使用 `x:Static`：
 
 ```xml
-<TextBlock Text="{x:Static keys:LangKey.Greeting}" />
+<Window xmlns:culture="clr-namespace:Arkheide.Essential.Culture"
+        Title="{x:Static culture:Key.App_Title}">
+  <TextBlock Text="{x:Static culture:Key.Greeting}" />
+</Window>
 ```
 
-WinUI 3 使用一次性强类型绑定：
+Avalonia 同样使用 `x:Static`，但命名空间映射使用 `using:` 语法：
 
 ```xml
-<TextBlock Text="{x:Bind keys:LangKey.Greeting, Mode=OneTime}" />
+<Window xmlns:culture="using:Arkheide.Essential.Culture">
+  <TextBlock Text="{x:Static culture:Key.Greeting}" />
+</Window>
 ```
 
-生成属性返回的仍是稳定 token，框架 Applicator 会解析当前文化并在语言变化后刷新。首次添加或修改键后，如果 XAML IntelliSense 尚未更新，请先构建一次项目。
+WinUI 3 使用静态属性的 `x:Bind`：
+
+```xml
+<Window xmlns:culture="using:Arkheide.Essential.Culture">
+  <TextBlock Text="{x:Bind culture:Key.Greeting, Mode=OneTime}" />
+</Window>
+```
+
+这些表达式在初始化时把 token 写入属性；对应 Applicator 随后写入译文，并在 `Localizer.Current.Changed` 后刷新。WinUI 的 `Mode=OneTime` 可避免绑定再次覆盖 Applicator 写入的值。
+
+强类型引用会在编译期检查成员。编辑器通常也能提供成员补全；首次生成或修改键后，如果 IntelliSense 尚未更新，请先构建一次项目，再重新打开补全列表。
+
+## UI Applicator 生命周期
+
+三个框架包都提供无参 Applicator，由应用显式管理：
+
+- WPF：`new WpfLocalizationApplicator()`，调用 `Start(Dispatcher)`；窗口显示前调用 `Apply(window)`；退出时调用 `Stop()` 或 `Dispose()`。
+- Avalonia：`new AvaloniaLocalizationApplicator()`，调用 `Start(Application)`；根视图呈现前调用 `Apply(root)`；退出时调用 `Stop()` 或 `Dispose()`。
+- WinUI 3：`new WinUILocalizationApplicator()`；窗口激活前调用 `Attach(window)`，独立对话框显示前调用 `Apply(dialog)`；关闭时调用 `Detach(window)` 或最终 `Dispose()`。
+
+这里需要清理的是 Applicator 的框架事件订阅；`Localizer` 核心自身不需要显式释放。
 
 ## 文档与示例
 
 - [完整使用指南](docs/usage-guide.md)
 - [Demo 总览](demo/README.md)
-- [Console](demo/LangKey.Demo.Console/README.md)
-- [普通 WPF](demo/LangKey.Demo.Wpf/README.md)
-- [WPF + DI](demo/LangKey.Demo.Wpf.DependencyInjection/README.md)
-- [Avalonia + DI](demo/LangKey.Demo.Avalonia.DependencyInjection/README.md)
-- [WinUI 3 + DI](demo/LangKey.Demo.WinUI3.DependencyInjection/README.md)
+- [Console Demo](demo/Arkheide.Essential.Culture.Demo.Console/README.md)
+- [WPF Demo](demo/Arkheide.Essential.Culture.Demo.Wpf/README.md)
+- [Avalonia Demo](demo/Arkheide.Essential.Culture.Demo.Avalonia/README.md)
+- [WinUI 3 Demo](demo/Arkheide.Essential.Culture.Demo.WinUI3/README.md)
+- [测试项目说明](tests/README.md)
 
 ## 许可证
 
-LangKey 使用 [MIT License](LICENSE.txt)。
+Arkheide.Essential.Culture 使用 [MIT License](LICENSE.txt)。

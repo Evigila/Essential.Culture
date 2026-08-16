@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="..\Culture.json" Link="Culture.json" />
+    <None Include="..\Culture.json" Link="Culture.json" CopyToOutputDirectory="PreserveNewest" />
+    <Compile Include="..\Shared\DelegateCommand.cs" Link="Shared\DelegateCommand.cs" />
+    <PackageReference Include="Avalonia" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
+    <ProjectReference Include="..\..\src\Arkheide.Essential.Culture.Avalonia\Arkheide.Essential.Culture.Avalonia.csproj" />
+    <ProjectReference Include="..\..\src\Arkheide.Essential.Culture.Generator\Arkheide.Essential.Culture.Generator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+</Project>

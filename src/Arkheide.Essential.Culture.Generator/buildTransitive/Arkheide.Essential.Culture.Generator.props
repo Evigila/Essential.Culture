@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <ArkheideEssentialCultureNamespace Condition="'$(ArkheideEssentialCultureNamespace)' == ''">Arkheide.Essential.Culture</ArkheideEssentialCultureNamespace>
+    <ArkheideEssentialCultureGeneratorEnabled Condition="'$(ArkheideEssentialCultureGeneratorEnabled)' == ''">auto</ArkheideEssentialCultureGeneratorEnabled>
+    <ArkheideEssentialCultureAutoInclude Condition="'$(ArkheideEssentialCultureAutoInclude)' == ''">true</ArkheideEssentialCultureAutoInclude>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="ArkheideEssentialCultureNamespace" />
+    <CompilerVisibleProperty Include="ArkheideEssentialCultureGeneratorEnabled" />
+    <!-- NuGet does not flow analyzer assets through package dependencies by default.
+         Import the packaged generator through buildTransitive so Core and each
+         framework package provide Arkheide.Essential.Culture.Key without an extra PackageReference. -->
+    <Analyzer Include="$(MSBuildThisFileDirectory)..\analyzers\dotnet\cs\Arkheide.Essential.Culture.Generator.dll" />
+  </ItemGroup>
+</Project>
