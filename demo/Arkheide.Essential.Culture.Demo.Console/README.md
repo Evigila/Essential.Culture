@@ -1,6 +1,6 @@
 # Arkheide.Essential.Culture Console Demo
 
-这个示例展示如何通过 `Localizer` 静态门面使用生成键、解析带参文本，并在进程运行期间切换文化。
+这个示例展示如何通过 `Localizer` 静态门面使用生成键、解析带参文本，并在进程运行期间即时重新本地化已有消息。
 
 ## 项目结构
 
@@ -44,6 +44,23 @@ Localizer.Current.SetCulture(next);
 
 `Localizer.Parse(token)` 解析无参数文本；`Localizer.Parse(token, args...)` 使用当前文化执行复合格式化。需要响应文化变化的组件可以订阅 `Localizer.Current.Changed`。核心不需要显式初始化，也不需要在进程退出时清理。
 
+示例的消息历史保存稳定 token，而不是保存已经翻译的字符串：
+
+```csharp
+var messageHistory = new List<string>();
+messageHistory.Add(GeneratedKey.Hello_World);
+
+Localizer.Current.Changed += (_, _) =>
+{
+    foreach (var message in messageHistory)
+    {
+        Console.WriteLine(Localizer.Parse(message));
+    }
+};
+```
+
+控制台无法改写已经输出的普通文本，因此切换文化时不会清屏，而是用新文化重新解析历史 token，并追加一份新的本地化视图。这既保留了旧输出，也能直接观察已有消息随文化变化得到的新译文。
+
 ## 运行
 
 ```powershell
@@ -52,8 +69,8 @@ dotnet run --project demo\Arkheide.Essential.Culture.Demo.Console\Arkheide.Essen
 
 菜单操作：
 
-1. 在英文和中文之间切换。
-2. 输出当前文化下的 Hello World。
+1. 在英文和中文之间切换，并追加重新本地化后的消息历史。
+2. 输出当前文化下的 Hello World，同时把稳定 token 加入消息历史。
 3. 退出程序。
 
 Console 项目没有 XAML。在 C# 中输入 `Arkheide.Essential.Culture.Key.` 时，IntelliSense 会列出 Generator 产生的键属性；属性值只是稳定 token，实际文本始终由 `Localizer.Parse` 返回。
