@@ -12,7 +12,10 @@
   <ItemGroup>
     <ProjectReference
       Include="..\Arkheide.Essential.Culture.Generator\Arkheide.Essential.Culture.Generator.csproj"
+      OutputItemType="Analyzer"
+      ExcludeAssets="compile;runtime"
       Private="false"
       PrivateAssets="none" />
   </ItemGroup>
+
 </Project>

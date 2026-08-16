@@ -11,7 +11,6 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
-        Localizer.Current.SetCulture("en-US");
         applicator = new WinUILocalizationApplicator();
     }
 

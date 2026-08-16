@@ -125,6 +125,56 @@ public sealed class CultureGeneratorTests
         Assert.Equal("AEC004", diagnostic.Id);
     }
 
+    [Fact]
+    public void Equal_document_content_does_not_invalidate_generation_inputs()
+    {
+        const string content = """
+            {"Greeting":{"en-US":"Hello"}}
+            """;
+        var firstDocument = Document("C:\\project\\Culture.json", content);
+        var replacement = Document("C:\\project\\Culture.json", content);
+        var syntaxTree = CSharpSyntaxTree.ParseText("internal sealed class Input;");
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [syntaxTree],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+        );
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            [new CultureGenerator().AsSourceGenerator()],
+            [firstDocument],
+            (CSharpParseOptions)syntaxTree.Options,
+            new TestAnalyzerConfigOptionsProvider(
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            ),
+            new GeneratorDriverOptions(
+                IncrementalGeneratorOutputKind.None,
+                trackIncrementalGeneratorSteps: true
+            )
+        );
+
+        driver = driver.RunGenerators(compilation);
+        driver = driver.ReplaceAdditionalText(firstDocument, replacement);
+        driver = driver.RunGenerators(compilation);
+
+        var steps = driver
+            .GetRunResult()
+            .Results.Single()
+            .TrackedSteps["CultureGenerationInputs"];
+        Assert.All(
+            steps.SelectMany(step => step.Outputs),
+            output =>
+                Assert.Contains(
+                    output.Reason,
+                    new[]
+                    {
+                        IncrementalStepRunReason.Cached,
+                        IncrementalStepRunReason.Unchanged,
+                    }
+                )
+        );
+    }
+
     private static GeneratorDriverRunResult RunGenerator(
         string? enabled = null,
         string? targetNamespace = null,

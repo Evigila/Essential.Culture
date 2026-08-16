@@ -12,5 +12,11 @@
          Import the packaged generator through buildTransitive so Core and each
          framework package provide Arkheide.Essential.Culture.Key without an extra PackageReference. -->
     <Analyzer Include="$(MSBuildThisFileDirectory)..\analyzers\dotnet\cs\Arkheide.Essential.Culture.Generator.dll" />
+    <Content
+      Include="$(MSBuildProjectDirectory)\Culture.json"
+      Link="Culture.json"
+      CopyToOutputDirectory="PreserveNewest"
+      CopyToPublishDirectory="PreserveNewest"
+      Condition="'$(ArkheideEssentialCultureAutoInclude)' != 'false' and Exists('$(MSBuildProjectDirectory)\Culture.json')" />
   </ItemGroup>
 </Project>

@@ -9,6 +9,8 @@ namespace Arkheide.Essential.Culture.Generator;
 [Generator(LanguageNames.CSharp)]
 public sealed class CultureGenerator : IIncrementalGenerator
 {
+    private static readonly string GeneratorVersion =
+        typeof(CultureGenerator).Assembly.GetName().Version?.ToString() ?? "0.0.0.0";
     private static readonly DiagnosticDescriptor MissingDocument = new(
         "AEC001",
         "Culture.json was not found",
@@ -53,26 +55,32 @@ public sealed class CultureGenerator : IIncrementalGenerator
                 )
             )
             .Select(
-                static (file, cancellationToken) =>
-                    new LocalizationDocument(
-                        file.Path,
-                        file.GetText(cancellationToken)?.ToString() ?? string.Empty
-                    )
+                static (file, cancellationToken) => new LocalizationDocument(
+                    file.GetText(cancellationToken)?.ToString() ?? string.Empty
+                )
             )
-            .Collect();
+            .Collect()
+            .WithTrackingName("CultureDocuments");
         var configuration = context.AnalyzerConfigOptionsProvider.Select(
-            static (options, _) =>
-                new GeneratorConfiguration(
+            static (options, cancellationToken) =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return new GeneratorConfiguration(
                     GetGlobalOption(options, "build_property.ArkheideEssentialCultureNamespace"),
                     GetGlobalOption(
                         options,
                         "build_property.ArkheideEssentialCultureGeneratorEnabled"
                     )
-                )
-        );
+                );
+            }
+        ).WithTrackingName("CultureConfiguration");
+
+        var inputs = documents
+            .Combine(configuration)
+            .WithTrackingName("CultureGenerationInputs");
 
         context.RegisterSourceOutput(
-            documents.Combine(configuration),
+            inputs,
             static (productionContext, input) =>
                 Generate(productionContext, input.Left, input.Right)
         );
@@ -92,6 +100,7 @@ public sealed class CultureGenerator : IIncrementalGenerator
         GeneratorConfiguration configuration
     )
     {
+        context.CancellationToken.ThrowIfCancellationRequested();
         if (!TryGetMode(configuration.Enabled, out var mode))
         {
             context.ReportDiagnostic(
@@ -134,7 +143,14 @@ public sealed class CultureGenerator : IIncrementalGenerator
         }
 
         string[] keys;
-        if (!JsonKeyReader.TryRead(documents[0].Content, out keys, out var parseError))
+        if (
+            !JsonKeyReader.TryRead(
+                documents[0].Content,
+                context.CancellationToken,
+                out keys,
+                out var parseError
+            )
+        )
         {
             context.ReportDiagnostic(
                 Diagnostic.Create(
@@ -150,6 +166,7 @@ public sealed class CultureGenerator : IIncrementalGenerator
         var collected = new List<string>();
         foreach (var key in keys)
         {
+            context.CancellationToken.ThrowIfCancellationRequested();
             if (!IsValidKey(key))
             {
                 context.ReportDiagnostic(Diagnostic.Create(InvalidKey, Location.None, key));
@@ -187,12 +204,13 @@ public sealed class CultureGenerator : IIncrementalGenerator
         source.Append("namespace ").Append(configuration.TargetNamespace).AppendLine(";");
         source.AppendLine();
         source.AppendLine(
-            "[global::System.CodeDom.Compiler.GeneratedCodeAttribute(\"Arkheide.Essential.Culture.Generator\", \"1.0.0\")]"
+            $"[global::System.CodeDom.Compiler.GeneratedCodeAttribute(\"Arkheide.Essential.Culture.Generator\", \"{GeneratorVersion}\")]"
         );
         source.AppendLine("public static class Key");
         source.AppendLine("{");
         foreach (var key in keys)
         {
+            context.CancellationToken.ThrowIfCancellationRequested();
             source
                 .Append("    public static string ")
                 .Append(key)
@@ -241,20 +259,24 @@ public sealed class CultureGenerator : IIncrementalGenerator
                 && SyntaxFacts.GetKeywordKind(part) == SyntaxKind.None
             );
 
-    private sealed class LocalizationDocument
+    private sealed class LocalizationDocument : IEquatable<LocalizationDocument>
     {
-        public LocalizationDocument(string path, string content)
+        public LocalizationDocument(string content)
         {
-            Path = path;
             Content = content;
         }
 
-        public string Path { get; }
-
         public string Content { get; }
+
+        public bool Equals(LocalizationDocument? other) =>
+            other is not null && string.Equals(Content, other.Content, StringComparison.Ordinal);
+
+        public override bool Equals(object? obj) => Equals(obj as LocalizationDocument);
+
+        public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(Content);
     }
 
-    private sealed class GeneratorConfiguration
+    private sealed class GeneratorConfiguration : IEquatable<GeneratorConfiguration>
     {
         public GeneratorConfiguration(string targetNamespace, string enabled)
         {
@@ -267,6 +289,22 @@ public sealed class CultureGenerator : IIncrementalGenerator
         public string TargetNamespace { get; }
 
         public string Enabled { get; }
+
+        public bool Equals(GeneratorConfiguration? other) =>
+            other is not null
+            && string.Equals(TargetNamespace, other.TargetNamespace, StringComparison.Ordinal)
+            && string.Equals(Enabled, other.Enabled, StringComparison.Ordinal);
+
+        public override bool Equals(object? obj) => Equals(obj as GeneratorConfiguration);
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return StringComparer.Ordinal.GetHashCode(TargetNamespace) * 397
+                    ^ StringComparer.Ordinal.GetHashCode(Enabled);
+            }
+        }
     }
 
     private enum GeneratorMode
@@ -279,18 +317,25 @@ public sealed class CultureGenerator : IIncrementalGenerator
     private sealed class JsonKeyReader
     {
         private readonly string text;
+        private readonly CancellationToken cancellationToken;
         private int position;
 
-        private JsonKeyReader(string text)
+        private JsonKeyReader(string text, CancellationToken cancellationToken)
         {
             this.text = text;
+            this.cancellationToken = cancellationToken;
         }
 
-        public static bool TryRead(string text, out string[] keys, out string error)
+        public static bool TryRead(
+            string text,
+            CancellationToken cancellationToken,
+            out string[] keys,
+            out string error
+        )
         {
             try
             {
-                var reader = new JsonKeyReader(text);
+                var reader = new JsonKeyReader(text, cancellationToken);
                 var collected = new List<string>();
                 reader.SkipWhitespace();
                 reader.ReadObject(collected);
@@ -327,8 +372,17 @@ public sealed class CultureGenerator : IIncrementalGenerator
 
             while (true)
             {
+                CheckCancellation();
                 SkipWhitespace();
-                var name = ReadString();
+                string? name = null;
+                if (rootKeys is null)
+                {
+                    SkipString();
+                }
+                else
+                {
+                    name = ReadString();
+                }
                 SkipWhitespace();
                 Expect(':');
                 SkipWhitespace();
@@ -337,7 +391,10 @@ public sealed class CultureGenerator : IIncrementalGenerator
                     Fail($"key '{name}' must contain a culture-to-string object");
                 }
 
-                rootKeys?.Add(name);
+                if (name is not null)
+                {
+                    rootKeys!.Add(name);
+                }
                 ReadValue();
                 SkipWhitespace();
                 if (TryConsume('}'))
@@ -360,6 +417,7 @@ public sealed class CultureGenerator : IIncrementalGenerator
 
             while (true)
             {
+                CheckCancellation();
                 ReadValue();
                 SkipWhitespace();
                 if (TryConsume(']'))
@@ -374,6 +432,7 @@ public sealed class CultureGenerator : IIncrementalGenerator
 
         private void ReadValue()
         {
+            CheckCancellation();
             SkipWhitespace();
             switch (Current)
             {
@@ -384,7 +443,7 @@ public sealed class CultureGenerator : IIncrementalGenerator
                     ReadArray();
                     break;
                 case '"':
-                    _ = ReadString();
+                    SkipString();
                     break;
                 case 't':
                     ConsumeLiteral("true");
@@ -407,6 +466,7 @@ public sealed class CultureGenerator : IIncrementalGenerator
             var result = new StringBuilder();
             while (!IsEnd)
             {
+                CheckCancellation();
                 var character = text[position++];
                 if (character == '"')
                 {
@@ -463,6 +523,64 @@ public sealed class CultureGenerator : IIncrementalGenerator
 
             Fail("contains an unterminated string");
             return string.Empty;
+        }
+
+        private void SkipString()
+        {
+            Expect('"');
+            while (!IsEnd)
+            {
+                CheckCancellation();
+                var character = text[position++];
+                if (character == '"')
+                {
+                    return;
+                }
+
+                if (character < ' ')
+                {
+                    Fail("a string contains an unescaped control character");
+                }
+
+                if (character != '\\')
+                {
+                    continue;
+                }
+
+                if (IsEnd)
+                {
+                    Fail("a string ends after an escape character");
+                }
+
+                var escaped = text[position++];
+                if (escaped == 'u')
+                {
+                    SkipUnicodeEscape();
+                }
+                else if (escaped is not ('"' or '\\' or '/' or 'b' or 'f' or 'n' or 'r' or 't'))
+                {
+                    Fail($"contains unsupported escape '\\{escaped}'");
+                }
+            }
+
+            Fail("contains an unterminated string");
+        }
+
+        private void SkipUnicodeEscape()
+        {
+            if (position + 4 > text.Length)
+            {
+                Fail("contains an incomplete unicode escape");
+            }
+
+            for (var index = 0; index < 4; index++)
+            {
+                var character = text[position++];
+                if (character is not (>= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F'))
+                {
+                    Fail($"invalid unicode escape at position {position - 1}");
+                }
+            }
         }
 
         private char ReadUnicodeEscape()
@@ -579,5 +697,13 @@ public sealed class CultureGenerator : IIncrementalGenerator
 
         private void Fail(string message) =>
             throw new FormatException($"{message} at position {position}");
+
+        private void CheckCancellation()
+        {
+            if ((position & 1023) == 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+        }
     }
 }

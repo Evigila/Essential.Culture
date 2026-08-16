@@ -1,6 +1,6 @@
 # Arkheide.Essential.Culture Avalonia Demo
 
-这个示例展示 Avalonia 应用如何手动管理 `AvaloniaLocalizationApplicator`，使用强类型 XAML token，并在文化变化后同时刷新视觉树和 ViewModel 属性。
+这个示例展示 Avalonia 应用如何管理 `AvaloniaLocalizationApplicator`、使用强类型 XAML token，并即时切换文化。
 
 ## 依赖
 
@@ -14,22 +14,19 @@
 
 ## Applicator 生命周期
 
-[`App.axaml.cs`](App.axaml.cs) 在桌面生命周期初始化时创建 Applicator、ViewModel 和窗口：
+[`App.axaml.cs`](App.axaml.cs) 在桌面生命周期初始化时创建 Applicator 和窗口：
 
 ```csharp
 private AvaloniaLocalizationApplicator? applicator;
-private AvaloniaDemoViewModel? viewModel;
 
 public override void OnFrameworkInitializationCompleted()
 {
     if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
     {
-        Localizer.Current.SetCulture("en-US");
         applicator = new AvaloniaLocalizationApplicator();
         applicator.Start(this);
 
-        viewModel = new AvaloniaDemoViewModel();
-        var window = new MainWindow(viewModel, applicator);
+        var window = new MainWindow(applicator);
         applicator.Apply(window);
         desktop.MainWindow = window;
         desktop.Exit += Desktop_Exit;
@@ -39,14 +36,13 @@ public override void OnFrameworkInitializationCompleted()
 }
 ```
 
-`Start(this)` 监听后续视觉树加载和文化变化；`Apply(window)` 在首次呈现前立即处理窗口。应用退出时释放 ViewModel 和 Applicator：
+`Start(this)` 监听后续视觉树加载和文化变化；`Apply(window)` 在首次呈现前立即处理窗口。应用退出时释放 Applicator：
 
 ```csharp
 private void Desktop_Exit(
     object? sender,
     ControlledApplicationLifetimeExitEventArgs e)
 {
-    viewModel?.Dispose();
     applicator?.Dispose();
 }
 ```
@@ -67,16 +63,19 @@ private void Desktop_Exit(
 
 `x:Static` 在编译时解析 Generator 产生的公开静态属性。属性值仍是 `Key.*` token；Applicator 保存 token、写入当前译文，并在 `Localizer.Current.Changed` 后刷新。
 
-## ViewModel 动态属性
+## 当前文化文本
 
-当前文化文本需要格式化参数，因此 ViewModel 直接解析：
+当前文化文本需要一个格式化参数，因此窗口仅保留一个简短刷新函数：
 
 ```csharp
-public string CurrentCulture =>
-    Localizer.Parse(DemoKeys.Current_Culture, Localizer.Current.Culture);
+private void UpdateCultureText() =>
+    CurrentCultureText.Text = Localizer.Parse(
+        DemoKey.Current_Culture,
+        Localizer.Current.Culture
+    );
 ```
 
-这类属性不保留在视觉属性中的原始 token，所以 ViewModel 订阅 `Localizer.Current.Changed` 并触发 `PropertyChanged`；`Dispose()` 中会退订事件。语言命令调用 `Localizer.Current.SetCulture(...)`。
+窗口在文化变化时调用该函数，并在关闭时退订事件。示例不引入 ViewModel、Command 或额外 MVVM 基础设施；语言按钮直接调用 `Localizer.Current.SetCulture(...)`。
 
 ## 运行与验证
 
@@ -87,6 +86,6 @@ dotnet run --project demo\Arkheide.Essential.Culture.Demo.Avalonia\Arkheide.Esse
 请验证：
 
 - 主窗口标题、正文和按钮在首次显示时已经本地化。
-- 切换语言后 XAML 文本和 ViewModel 当前文化文本同时刷新。
+- 切换语言后 XAML 文本和当前文化文本同时刷新。
 - 问候对话框的标题、正文和关闭按钮使用当前语言。
 - 关闭应用后没有遗留的文化变化订阅。

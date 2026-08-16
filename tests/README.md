@@ -13,4 +13,4 @@
 dotnet test Arkheide.Essential.Culture.slnx -c Release
 ```
 
-WinUI 3 的窗口生命周期、`DispatcherQueue` 和 XAML UI 线程行为不能由当前普通 xUnit 项目可靠模拟，因此保留在 [WinUI 3 Demo](../demo/Arkheide.Essential.Culture.Demo.WinUI3/README.md) 的实机测试清单中。
+WinUI 3 的首次本地化依赖真实 `Window.Activated`、生成的 `x:Bind` 回调顺序、`DispatcherQueue` 和依赖属性存储。普通非 UI xUnit 测试即使伪造一个状态机，也无法验证这些关键条件，因此没有添加只能覆盖布尔标记的假测试。WinUI 项目由 Debug/Release 构建门禁覆盖；窗口首次激活、失活重入、重复弹窗与 GC 行为保留在 [WinUI 3 Demo](../demo/Arkheide.Essential.Culture.Demo.WinUI3/README.md) 的实机测试清单中。

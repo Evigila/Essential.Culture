@@ -231,7 +231,7 @@ protected override void OnExit(ExitEventArgs e)
 }
 ```
 
-`Start` 监听后续 Loaded 事件和文化变化；`Apply` 立即扫描已经创建的对象树，避免首帧显示 `Key.*`。
+`Start` 监听后续 Loaded 事件和文化变化；`Apply` 必须在目标对象所属的 Dispatcher 线程调用，并立即发现已经创建的对象树，避免首帧显示 `Key.*`。文化变化只刷新已发现的本地化属性，不会重新扫描整棵视觉树。
 
 WPF Applicator 识别常见显示属性，包括：
 
@@ -240,7 +240,6 @@ WPF Applicator 识别常见显示属性，包括：
 - `Content`、`Header`、`ToolTip`
 - `AutomationProperties.Name`
 - `DataGridColumn.Header`
-- `ItemsControl.ItemsSource` 中实现 `ILocalizable` 的数据项
 
 退出时调用 `Stop()` 或 `Dispose()` 解除框架事件订阅。
 
@@ -274,7 +273,7 @@ public override void OnFrameworkInitializationCompleted()
 }
 ```
 
-在应用退出时调用 `Stop()` 或 `Dispose()`。新建窗口、对话框或其他独立根时，在首次显示前调用 `Apply(root)`。
+在应用退出时调用 `Stop()` 或 `Dispose()`。新建窗口、对话框或其他独立根时，在首次显示前从 UI 线程调用 `Apply(root)`。文化变化只刷新已经发现的本地化属性。
 
 Applicator 识别 `Window.Title`、`TextBlock.Text`、Content、Header、`TextBox.PlaceholderText`、ToolTip 和 Automation Name 等显示属性。
 
@@ -310,9 +309,9 @@ protected override void OnLaunched(LaunchActivatedEventArgs args)
 }
 ```
 
-`Attach` 必须在窗口所属 UI 线程调用。它会立即处理窗口标题和视觉树，在文化变化后通过窗口自己的 `DispatcherQueue` 刷新，并在窗口关闭时解除跟踪。应用最终退出时调用 `Dispose()`。
+`Attach(window)` 必须在窗口所属 UI 线程、`Activate()` 之前调用。Applicator 会先发现当前已有的 token；窗口首次进入非 `Deactivated` 状态时，它会在 `x:Bind` 写入 token 后再发现一次，然后立即退订 `Activated`。后续文化变化会通过窗口自己的 `DispatcherQueue` 合并调度，并且只刷新已经登记的属性，不会重新扫描整棵视觉树。窗口关闭时会自动解除跟踪；应用最终退出时调用 `Dispose()`。
 
-对于 `ContentDialog`、Popup 内容或其他独立根，在显示前主动调用：
+对于 `ContentDialog`、Popup 内容或其他独立根，必须在目标所属的 UI 线程、首次显示前主动调用：
 
 ```csharp
 var dialog = new ContentDialog
@@ -339,7 +338,7 @@ Applicator 识别 Text、Content、ContentDialog 按钮文本、Placeholder、To
 - fallback 文化存在于全部键中。
 - WPF 窗口在 `Show()` 前执行过 `Apply(window)`。
 - Avalonia 根视图在首次呈现前执行过 `Apply(root)`。
-- WinUI 窗口在 `Activate()` 前执行过 `Attach(window)`，独立对话框在显示前执行过 `Apply(dialog)`。
+- WinUI 窗口在 `Activate()` 前执行过 `Attach(window)`，独立对话框在目标 UI 线程、显示前执行过 `Apply(dialog)`。
 - Applicator 在应用退出时执行过 `Stop()`、`Detach(...)` 或 `Dispose()`。
 
 ## 10. 常见问题

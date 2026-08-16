@@ -12,32 +12,34 @@ namespace Arkheide.Essential.Culture.Avalonia;
 
 /// <summary>
 /// Resolves Key tokens stored in common Avalonia display properties and refreshes them when
-/// the parser culture changes.
+/// the active culture changes.
 /// </summary>
-public sealed class AvaloniaLocalizationApplicator : IAvaloniaLocalizationApplicator, IDisposable
+public sealed class AvaloniaLocalizationApplicator : IAvaloniaLocalizationApplicator
 {
     private static readonly Lock ClassHandlerGate = new();
-    private static readonly List<
-        WeakReference<AvaloniaLocalizationApplicator>
-    > StartedApplicators = [];
+    private static WeakReference<AvaloniaLocalizationApplicator>[] startedSnapshot = [];
     private static bool isClassHandlerRegistered;
 
-    private readonly ConditionalWeakTable<
-        AvaloniaObject,
-        Dictionary<AvaloniaProperty, TrackedResource>
-    > resourceKeys = [];
+    private readonly ConditionalWeakTable<AvaloniaObject, TrackedTarget> trackedLookup = [];
+    private readonly List<WeakReference<TrackedTarget>> trackedTargets = [];
     private readonly Lock gate = new();
     private Application? application;
+    private int runVersion;
+    private int refreshPending;
     private bool isStarted;
     private bool isDisposed;
-
-    /// <summary>Creates an Avalonia applicator backed by the active localization runtime.</summary>
-    public AvaloniaLocalizationApplicator() { }
 
     /// <inheritdoc />
     public void Start(Application application)
     {
         ArgumentNullException.ThrowIfNull(application);
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            throw new InvalidOperationException(
+                "Avalonia localization must be started on the UI thread."
+            );
+        }
+
         lock (gate)
         {
             ObjectDisposedException.ThrowIf(isDisposed, this);
@@ -46,7 +48,7 @@ public sealed class AvaloniaLocalizationApplicator : IAvaloniaLocalizationApplic
                 if (!ReferenceEquals(this.application, application))
                 {
                     throw new InvalidOperationException(
-                        "The Avalonia localization applicator is already running."
+                        "The Avalonia localization applicator is already running for another application."
                     );
                 }
 
@@ -55,60 +57,65 @@ public sealed class AvaloniaLocalizationApplicator : IAvaloniaLocalizationApplic
 
             this.application = application;
             isStarted = true;
+            runVersion = NextVersion(runVersion);
             Localizer.Current.Changed += Localizer_Changed;
         }
 
         RegisterStartedApplicator(this);
-        RefreshApplicationRoots();
+        DiscoverApplicationRoots(application);
     }
 
     /// <inheritdoc />
     public void Apply(Visual root)
     {
         ArgumentNullException.ThrowIfNull(root);
-        if (Dispatcher.UIThread.CheckAccess())
+        if (!Dispatcher.UIThread.CheckAccess())
         {
-            ApplyCore(root);
+            throw new InvalidOperationException(
+                "Avalonia localization must be applied on the UI thread."
+            );
         }
-        else
-        {
-            Dispatcher.UIThread.InvokeAsync(() => ApplyCore(root)).GetAwaiter().GetResult();
-        }
-    }
 
-    /// <summary>Stops culture-change handling for this applicator.</summary>
-    public void Dispose()
-    {
         lock (gate)
         {
-            if (isDisposed)
-            {
-                return;
-            }
-
-            isDisposed = true;
+            ObjectDisposedException.ThrowIf(isDisposed, this);
         }
 
-        StopCore();
+        DiscoverTree(root);
     }
 
     /// <inheritdoc />
-    public void Stop() => StopCore();
+    public void Stop() => StopCore(dispose: false);
 
-    private void StopCore()
+    /// <inheritdoc />
+    public void Dispose() => StopCore(dispose: true);
+
+    private void StopCore(bool dispose)
     {
         var unregister = false;
         lock (gate)
         {
+            if (dispose)
+            {
+                if (isDisposed)
+                {
+                    return;
+                }
+
+                isDisposed = true;
+            }
+
             if (isStarted)
             {
                 isStarted = false;
                 application = null;
+                runVersion = NextVersion(runVersion);
                 Localizer.Current.Changed -= Localizer_Changed;
                 unregister = true;
             }
         }
 
+        Interlocked.Exchange(ref refreshPending, 0);
         if (unregister)
         {
             UnregisterStartedApplicator(this);
@@ -122,27 +129,17 @@ public sealed class AvaloniaLocalizationApplicator : IAvaloniaLocalizationApplic
             return;
         }
 
-        AvaloniaLocalizationApplicator[] applicators;
-        lock (ClassHandlerGate)
+        var snapshot = Volatile.Read(ref startedSnapshot);
+        for (var index = 0; index < snapshot.Length; index++)
         {
-            StartedApplicators.RemoveAll(reference => !reference.TryGetTarget(out _));
-            applicators =
-            [
-                .. StartedApplicators
-                    .Select(reference =>
-                        reference.TryGetTarget(out var applicator) ? applicator : null
-                    )
-                    .OfType<AvaloniaLocalizationApplicator>(),
-            ];
-        }
-
-        foreach (var applicator in applicators)
-        {
-            applicator.ApplyLoadedControl(control);
+            if (snapshot[index].TryGetTarget(out var applicator))
+            {
+                applicator.DiscoverLoadedControl(control);
+            }
         }
     }
 
-    private void ApplyLoadedControl(Control control)
+    private void DiscoverLoadedControl(Control control)
     {
         lock (gate)
         {
@@ -152,7 +149,7 @@ public sealed class AvaloniaLocalizationApplicator : IAvaloniaLocalizationApplic
             }
         }
 
-        ApplyObject(control);
+        DiscoverObject(control);
     }
 
     private static void RegisterStartedApplicator(AvaloniaLocalizationApplicator applicator)
@@ -165,8 +162,34 @@ public sealed class AvaloniaLocalizationApplicator : IAvaloniaLocalizationApplic
                 isClassHandlerRegistered = true;
             }
 
-            StartedApplicators.RemoveAll(reference => !reference.TryGetTarget(out _));
-            StartedApplicators.Add(new WeakReference<AvaloniaLocalizationApplicator>(applicator));
+            var current = startedSnapshot;
+            var liveCount = 0;
+            for (var index = 0; index < current.Length; index++)
+            {
+                if (
+                    current[index].TryGetTarget(out var target)
+                    && !ReferenceEquals(target, applicator)
+                )
+                {
+                    liveCount++;
+                }
+            }
+
+            var next = new WeakReference<AvaloniaLocalizationApplicator>[liveCount + 1];
+            var nextIndex = 0;
+            for (var index = 0; index < current.Length; index++)
+            {
+                if (
+                    current[index].TryGetTarget(out var target)
+                    && !ReferenceEquals(target, applicator)
+                )
+                {
+                    next[nextIndex++] = current[index];
+                }
+            }
+
+            next[nextIndex] = new WeakReference<AvaloniaLocalizationApplicator>(applicator);
+            Volatile.Write(ref startedSnapshot, next);
         }
     }
 
@@ -174,27 +197,44 @@ public sealed class AvaloniaLocalizationApplicator : IAvaloniaLocalizationApplic
     {
         lock (ClassHandlerGate)
         {
-            StartedApplicators.RemoveAll(reference =>
-                !reference.TryGetTarget(out var target) || ReferenceEquals(target, applicator)
-            );
+            var current = startedSnapshot;
+            var liveCount = 0;
+            for (var index = 0; index < current.Length; index++)
+            {
+                if (
+                    current[index].TryGetTarget(out var target)
+                    && !ReferenceEquals(target, applicator)
+                )
+                {
+                    liveCount++;
+                }
+            }
+
+            if (liveCount == current.Length)
+            {
+                return;
+            }
+
+            var next = new WeakReference<AvaloniaLocalizationApplicator>[liveCount];
+            var nextIndex = 0;
+            for (var index = 0; index < current.Length; index++)
+            {
+                if (
+                    current[index].TryGetTarget(out var target)
+                    && !ReferenceEquals(target, applicator)
+                )
+                {
+                    next[nextIndex++] = current[index];
+                }
+            }
+
+            Volatile.Write(ref startedSnapshot, next);
         }
     }
 
     private void Localizer_Changed(object? sender, EventArgs e)
     {
-        if (Dispatcher.UIThread.CheckAccess())
-        {
-            RefreshApplicationRoots();
-        }
-        else
-        {
-            Dispatcher.UIThread.Post(RefreshApplicationRoots, DispatcherPriority.Normal);
-        }
-    }
-
-    private void RefreshApplicationRoots()
-    {
-        Application? targetApplication;
+        int version;
         lock (gate)
         {
             if (!isStarted || isDisposed)
@@ -202,104 +242,320 @@ public sealed class AvaloniaLocalizationApplicator : IAvaloniaLocalizationApplic
                 return;
             }
 
-            targetApplication = application;
+            version = runVersion;
         }
 
-        switch (targetApplication?.ApplicationLifetime)
+        if (!TryMarkRefreshPending(version))
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(
+            () => RefreshPending(version),
+            DispatcherPriority.Normal
+        );
+    }
+
+    private void RefreshPending(int version)
+    {
+        if (Volatile.Read(ref refreshPending) != version)
+        {
+            return;
+        }
+
+        Interlocked.CompareExchange(ref refreshPending, 0, version);
+        lock (gate)
+        {
+            if (!isStarted || isDisposed || runVersion != version)
+            {
+                return;
+            }
+        }
+
+        RefreshTracked();
+    }
+
+    private void DiscoverApplicationRoots(Application targetApplication)
+    {
+        switch (targetApplication.ApplicationLifetime)
         {
             case IClassicDesktopStyleApplicationLifetime desktop:
-                foreach (var window in desktop.Windows)
+                for (var index = 0; index < desktop.Windows.Count; index++)
                 {
-                    ApplyCore(window);
+                    DiscoverTree(desktop.Windows[index]);
                 }
 
                 break;
             case ISingleViewApplicationLifetime singleView when singleView.MainView is { } mainView:
-                ApplyCore(mainView);
+                DiscoverTree(mainView);
                 break;
         }
     }
 
-    private void ApplyCore(Visual root)
+    private void DiscoverTree(Visual root)
     {
-        ApplyObject(root);
+        DiscoverObject(root);
         foreach (var descendant in root.GetVisualDescendants())
         {
-            ApplyObject(descendant);
+            DiscoverObject(descendant);
         }
     }
 
-    private void ApplyObject(AvaloniaObject target)
+    private void DiscoverObject(AvaloniaObject target)
     {
         if (target is Window)
         {
-            ApplyProperty(target, Window.TitleProperty);
+            DiscoverProperty(target, Window.TitleProperty);
         }
 
         if (target is TextBlock)
         {
-            ApplyProperty(target, TextBlock.TextProperty);
+            DiscoverProperty(target, TextBlock.TextProperty);
         }
 
         if (target is ContentControl)
         {
-            ApplyProperty(target, ContentControl.ContentProperty);
+            DiscoverProperty(target, ContentControl.ContentProperty);
         }
 
         if (target is HeaderedContentControl)
         {
-            ApplyProperty(target, HeaderedContentControl.HeaderProperty);
+            DiscoverProperty(target, HeaderedContentControl.HeaderProperty);
         }
 
         if (target is HeaderedItemsControl)
         {
-            ApplyProperty(target, HeaderedItemsControl.HeaderProperty);
+            DiscoverProperty(target, HeaderedItemsControl.HeaderProperty);
         }
 
         if (target is TextBox)
         {
-            ApplyProperty(target, TextBox.PlaceholderTextProperty);
+            DiscoverProperty(target, TextBox.PlaceholderTextProperty);
         }
 
         if (target is StyledElement)
         {
-            ApplyProperty(target, ToolTip.TipProperty);
-            ApplyProperty(target, AutomationProperties.NameProperty);
+            DiscoverProperty(target, ToolTip.TipProperty);
+            DiscoverProperty(target, AutomationProperties.NameProperty);
         }
     }
 
-    private void ApplyProperty(AvaloniaObject target, AvaloniaProperty property)
+    private void DiscoverProperty(AvaloniaObject target, AvaloniaProperty property)
     {
         var current = target.GetValue(property);
-        var values = resourceKeys.GetOrCreateValue(target);
-        string key;
-        if (!values.TryGetValue(property, out var tracked))
+        if (trackedLookup.TryGetValue(target, out var trackedTarget))
         {
-            if (current is not string token || !Localizer.Contains(token))
+            var index = trackedTarget.IndexOf(property);
+            if (index >= 0)
             {
+                var tracked = trackedTarget.Resources[index];
+                if (Equals(current, tracked.LastApplied))
+                {
+                    if (Localizer.TryParse(tracked.Key, out var translation))
+                    {
+                        SetTranslation(target, property, current, translation);
+                        tracked.LastApplied = translation;
+                    }
+                    else
+                    {
+                        RemoveTrackedResource(target, trackedTarget, index);
+                    }
+                }
+                else if (TryTranslate(current, out var key, out var translation))
+                {
+                    tracked.Key = key;
+                    SetTranslation(target, property, current, translation);
+                    tracked.LastApplied = translation;
+                }
+                else
+                {
+                    RemoveTrackedResource(target, trackedTarget, index);
+                }
+
                 return;
             }
+        }
 
-            key = token;
-        }
-        else if (current is string token && Localizer.Contains(token))
+        if (!TryTranslate(current, out var newKey, out var newTranslation))
         {
-            key = token;
-        }
-        else if (Equals(current, tracked.LastApplied))
-        {
-            key = tracked.Key;
-        }
-        else
-        {
-            values.Remove(property);
             return;
         }
 
-        var translation = Localizer.Parse(key);
-        target.SetCurrentValue(property, translation);
-        values[property] = new TrackedResource(key, translation);
+        if (trackedTarget is null)
+        {
+            trackedTarget = new TrackedTarget(target);
+            trackedLookup.Add(target, trackedTarget);
+            trackedTargets.Add(new WeakReference<TrackedTarget>(trackedTarget));
+        }
+
+        trackedTarget.Resources.Add(new TrackedResource(property, newKey, newTranslation));
+        SetTranslation(target, property, current, newTranslation);
     }
 
-    private sealed record TrackedResource(string Key, string LastApplied);
+    private void RefreshTracked()
+    {
+        for (var targetIndex = trackedTargets.Count - 1; targetIndex >= 0; targetIndex--)
+        {
+            if (!trackedTargets[targetIndex].TryGetTarget(out var trackedTarget))
+            {
+                trackedTargets.RemoveAt(targetIndex);
+                continue;
+            }
+
+            var target = trackedTarget.Target;
+
+            for (
+                var resourceIndex = trackedTarget.Resources.Count - 1;
+                resourceIndex >= 0;
+                resourceIndex--
+            )
+            {
+                var tracked = trackedTarget.Resources[resourceIndex];
+                var current = target.GetValue(tracked.Property);
+                string translation;
+                if (Equals(current, tracked.LastApplied))
+                {
+                    if (!Localizer.TryParse(tracked.Key, out translation))
+                    {
+                        trackedTarget.Resources.RemoveAt(resourceIndex);
+                        continue;
+                    }
+                }
+                else if (TryTranslate(current, out var key, out translation))
+                {
+                    tracked.Key = key;
+                }
+                else
+                {
+                    trackedTarget.Resources.RemoveAt(resourceIndex);
+                    continue;
+                }
+
+                SetTranslation(target, tracked.Property, current, translation);
+                tracked.LastApplied = translation;
+            }
+
+            if (trackedTarget.Resources.Count == 0)
+            {
+                trackedLookup.Remove(target);
+                trackedTargets.RemoveAt(targetIndex);
+            }
+        }
+    }
+
+    private void RemoveTrackedResource(
+        AvaloniaObject target,
+        TrackedTarget trackedTarget,
+        int resourceIndex
+    )
+    {
+        trackedTarget.Resources.RemoveAt(resourceIndex);
+        if (trackedTarget.Resources.Count != 0)
+        {
+            return;
+        }
+
+        trackedLookup.Remove(target);
+        RemoveTrackedTargetFromRegistry(trackedTarget);
+    }
+
+    private void RemoveTrackedTargetFromRegistry(TrackedTarget trackedTarget)
+    {
+        for (var index = trackedTargets.Count - 1; index >= 0; index--)
+        {
+            if (
+                !trackedTargets[index].TryGetTarget(out var candidate)
+                || ReferenceEquals(candidate, trackedTarget)
+            )
+            {
+                trackedTargets.RemoveAt(index);
+            }
+        }
+    }
+
+    private static bool TryTranslate(
+        object? value,
+        out string key,
+        out string translation
+    )
+    {
+        if (
+            value is string token
+            && token.StartsWith(KeyToken.Prefix, StringComparison.Ordinal)
+            && Localizer.TryParse(token, out translation)
+        )
+        {
+            key = token;
+            return true;
+        }
+
+        key = string.Empty;
+        translation = string.Empty;
+        return false;
+    }
+
+    private static void SetTranslation(
+        AvaloniaObject target,
+        AvaloniaProperty property,
+        object? current,
+        string translation
+    )
+    {
+        if (!string.Equals(current as string, translation, StringComparison.Ordinal))
+        {
+            target.SetCurrentValue(property, translation);
+        }
+    }
+
+    private static int NextVersion(int current) => current == int.MaxValue ? 1 : current + 1;
+
+    private bool TryMarkRefreshPending(int version)
+    {
+        while (true)
+        {
+            var pending = Volatile.Read(ref refreshPending);
+            if (pending == version)
+            {
+                return false;
+            }
+
+            if (Interlocked.CompareExchange(ref refreshPending, version, pending) == pending)
+            {
+                return true;
+            }
+        }
+    }
+
+    private sealed class TrackedTarget(AvaloniaObject target)
+    {
+        internal AvaloniaObject Target { get; } = target;
+
+        internal List<TrackedResource> Resources { get; } = [];
+
+        internal int IndexOf(AvaloniaProperty property)
+        {
+            for (var index = 0; index < Resources.Count; index++)
+            {
+                if (Resources[index].Property == property)
+                {
+                    return index;
+                }
+            }
+
+            return -1;
+        }
+    }
+
+    private sealed class TrackedResource(
+        AvaloniaProperty property,
+        string key,
+        string lastApplied
+    )
+    {
+        internal AvaloniaProperty Property { get; } = property;
+
+        internal string Key { get; set; } = key;
+
+        internal string LastApplied { get; set; } = lastApplied;
+    }
 }

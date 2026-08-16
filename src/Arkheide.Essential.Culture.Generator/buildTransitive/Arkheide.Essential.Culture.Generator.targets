@@ -13,23 +13,4 @@
     </ItemGroup>
   </Target>
 
-  <Target
-    Name="ArkheideEssentialCultureCopyDefaultDocumentToOutput"
-    AfterTargets="Build"
-    Condition="'$(ArkheideEssentialCultureAutoInclude)' != 'false' and Exists('$(MSBuildProjectDirectory)\Culture.json')">
-    <Copy
-      SourceFiles="$(MSBuildProjectDirectory)\Culture.json"
-      DestinationFiles="$(TargetDir)Culture.json"
-      SkipUnchangedFiles="true" />
-  </Target>
-
-  <Target
-    Name="ArkheideEssentialCultureCopyDefaultDocumentToPublish"
-    AfterTargets="Publish"
-    Condition="'$(ArkheideEssentialCultureAutoInclude)' != 'false' and Exists('$(MSBuildProjectDirectory)\Culture.json')">
-    <Copy
-      SourceFiles="$(MSBuildProjectDirectory)\Culture.json"
-      DestinationFiles="$(PublishDir)Culture.json"
-      SkipUnchangedFiles="true" />
-  </Target>
 </Project>

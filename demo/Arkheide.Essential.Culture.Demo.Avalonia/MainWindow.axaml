@@ -1,9 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:Arkheide.Essential.Culture.Demo.Avalonia"
         xmlns:culture="using:Arkheide.Essential.Culture"
         x:Class="Arkheide.Essential.Culture.Demo.Avalonia.MainWindow"
-        x:DataType="vm:AvaloniaDemoViewModel"
         Title="{x:Static culture:Key.App_Title}"
         Width="1280"
         Height="720"
@@ -35,13 +33,13 @@
                    LineHeight="26"
                    Foreground="#4B5563"
                    TextWrapping="Wrap" />
-        <TextBlock Text="{Binding CurrentCulture}"
+        <TextBlock x:Name="CurrentCultureText"
                    Margin="0,20,0,0"
                    FontSize="14"
                    Foreground="#6B7280" />
         <StackPanel Margin="0,32,0,0" Orientation="Horizontal" Spacing="12">
           <Button Content="{x:Static culture:Key.Action_SwitchLanguage}"
-                  Command="{Binding SwitchCultureCommand}"
+                  Click="SwitchLanguage_Click"
                   MinWidth="180"
                   Height="44"
                   Padding="20,0"

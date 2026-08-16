@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Automation;
@@ -10,30 +9,28 @@ namespace Arkheide.Essential.Culture.Wpf;
 
 /// <summary>
 /// Resolves Key tokens stored in common WPF display dependency properties and refreshes them
-/// when the parser culture changes.
+/// when the active culture changes.
 /// </summary>
-public sealed class WpfLocalizationApplicator : IWpfLocalizationApplicator, IDisposable
+public sealed class WpfLocalizationApplicator : IWpfLocalizationApplicator
 {
     private static readonly Lock ClassHandlerGate = new();
-    private static readonly List<WeakReference<WpfLocalizationApplicator>> StartedApplicators = [];
+    private static WeakReference<WpfLocalizationApplicator>[] startedSnapshot = [];
     private static bool isClassHandlerRegistered;
 
-    private readonly ConditionalWeakTable<
-        DependencyObject,
-        Dictionary<DependencyProperty, string>
-    > resourceKeys = [];
+    private readonly ConditionalWeakTable<DependencyObject, TrackedTarget> trackedLookup = [];
+    private readonly List<WeakReference<TrackedTarget>> trackedTargets = [];
     private readonly Lock gate = new();
     private Dispatcher? dispatcher;
+    private int runVersion;
+    private int refreshPending;
     private bool isStarted;
     private bool isDisposed;
-
-    /// <summary>Creates a WPF applicator backed by the active localization runtime.</summary>
-    public WpfLocalizationApplicator() { }
 
     /// <inheritdoc />
     public void Start(Dispatcher dispatcher)
     {
         ArgumentNullException.ThrowIfNull(dispatcher);
+
         lock (gate)
         {
             ObjectDisposedException.ThrowIf(isDisposed, this);
@@ -51,6 +48,7 @@ public sealed class WpfLocalizationApplicator : IWpfLocalizationApplicator, IDis
 
             this.dispatcher = dispatcher;
             isStarted = true;
+            runVersion = NextVersion(runVersion);
             Localizer.Current.Changed += Localizer_Changed;
         }
 
@@ -61,49 +59,59 @@ public sealed class WpfLocalizationApplicator : IWpfLocalizationApplicator, IDis
     public void Apply(DependencyObject root)
     {
         ArgumentNullException.ThrowIfNull(root);
-        if (root.Dispatcher.CheckAccess())
+        if (!root.Dispatcher.CheckAccess())
         {
-            ApplyCore(root);
+            throw new InvalidOperationException(
+                "WPF localization must be applied on the target object's dispatcher thread."
+            );
         }
-        else
-        {
-            root.Dispatcher.Invoke(() => ApplyCore(root));
-        }
-    }
 
-    /// <summary>Stops culture-change handling for this applicator.</summary>
-    public void Dispose()
-    {
         lock (gate)
         {
-            if (isDisposed)
+            ObjectDisposedException.ThrowIf(isDisposed, this);
+            if (isStarted && dispatcher != root.Dispatcher)
             {
-                return;
+                throw new InvalidOperationException(
+                    "The target object belongs to a different dispatcher than the running applicator."
+                );
             }
-
-            isDisposed = true;
         }
 
-        StopCore();
+        DiscoverTree(root);
     }
 
-    /// <summary>Stops automatic handling without permanently disposing this applicator.</summary>
-    public void Stop() => StopCore();
+    /// <inheritdoc />
+    public void Stop() => StopCore(dispose: false);
 
-    private void StopCore()
+    /// <inheritdoc />
+    public void Dispose() => StopCore(dispose: true);
+
+    private void StopCore(bool dispose)
     {
         var unregister = false;
         lock (gate)
         {
+            if (dispose)
+            {
+                if (isDisposed)
+                {
+                    return;
+                }
+
+                isDisposed = true;
+            }
+
             if (isStarted)
             {
                 isStarted = false;
                 dispatcher = null;
+                runVersion = NextVersion(runVersion);
                 Localizer.Current.Changed -= Localizer_Changed;
                 unregister = true;
             }
         }
 
+        Interlocked.Exchange(ref refreshPending, 0);
         if (unregister)
         {
             UnregisterStartedApplicator(this);
@@ -112,32 +120,22 @@ public sealed class WpfLocalizationApplicator : IWpfLocalizationApplicator, IDis
 
     private static void Element_Loaded(object sender, RoutedEventArgs e)
     {
-        if (sender is not DependencyObject dependencyObject)
+        if (sender is not DependencyObject target)
         {
             return;
         }
 
-        WpfLocalizationApplicator[] applicators;
-        lock (ClassHandlerGate)
+        var snapshot = Volatile.Read(ref startedSnapshot);
+        for (var index = 0; index < snapshot.Length; index++)
         {
-            StartedApplicators.RemoveAll(reference => !reference.TryGetTarget(out _));
-            applicators =
-            [
-                .. StartedApplicators
-                    .Select(reference =>
-                        reference.TryGetTarget(out var applicator) ? applicator : null
-                    )
-                    .OfType<WpfLocalizationApplicator>(),
-            ];
-        }
-
-        foreach (var applicator in applicators)
-        {
-            applicator.ApplyLoadedObject(dependencyObject);
+            if (snapshot[index].TryGetTarget(out var applicator))
+            {
+                applicator.DiscoverLoadedObject(target);
+            }
         }
     }
 
-    private void ApplyLoadedObject(DependencyObject target)
+    private void DiscoverLoadedObject(DependencyObject target)
     {
         lock (gate)
         {
@@ -147,7 +145,7 @@ public sealed class WpfLocalizationApplicator : IWpfLocalizationApplicator, IDis
             }
         }
 
-        ApplyObject(target);
+        DiscoverObject(target);
     }
 
     private static void RegisterStartedApplicator(WpfLocalizationApplicator applicator)
@@ -165,8 +163,34 @@ public sealed class WpfLocalizationApplicator : IWpfLocalizationApplicator, IDis
                 isClassHandlerRegistered = true;
             }
 
-            StartedApplicators.RemoveAll(reference => !reference.TryGetTarget(out _));
-            StartedApplicators.Add(new WeakReference<WpfLocalizationApplicator>(applicator));
+            var current = startedSnapshot;
+            var liveCount = 0;
+            for (var index = 0; index < current.Length; index++)
+            {
+                if (
+                    current[index].TryGetTarget(out var target)
+                    && !ReferenceEquals(target, applicator)
+                )
+                {
+                    liveCount++;
+                }
+            }
+
+            var next = new WeakReference<WpfLocalizationApplicator>[liveCount + 1];
+            var nextIndex = 0;
+            for (var index = 0; index < current.Length; index++)
+            {
+                if (
+                    current[index].TryGetTarget(out var target)
+                    && !ReferenceEquals(target, applicator)
+                )
+                {
+                    next[nextIndex++] = current[index];
+                }
+            }
+
+            next[nextIndex] = new WeakReference<WpfLocalizationApplicator>(applicator);
+            Volatile.Write(ref startedSnapshot, next);
         }
     }
 
@@ -174,126 +198,324 @@ public sealed class WpfLocalizationApplicator : IWpfLocalizationApplicator, IDis
     {
         lock (ClassHandlerGate)
         {
-            StartedApplicators.RemoveAll(reference =>
-                !reference.TryGetTarget(out var target) || ReferenceEquals(target, applicator)
-            );
+            var current = startedSnapshot;
+            var liveCount = 0;
+            for (var index = 0; index < current.Length; index++)
+            {
+                if (
+                    current[index].TryGetTarget(out var target)
+                    && !ReferenceEquals(target, applicator)
+                )
+                {
+                    liveCount++;
+                }
+            }
+
+            if (liveCount == current.Length)
+            {
+                return;
+            }
+
+            var next = new WeakReference<WpfLocalizationApplicator>[liveCount];
+            var nextIndex = 0;
+            for (var index = 0; index < current.Length; index++)
+            {
+                if (
+                    current[index].TryGetTarget(out var target)
+                    && !ReferenceEquals(target, applicator)
+                )
+                {
+                    next[nextIndex++] = current[index];
+                }
+            }
+
+            Volatile.Write(ref startedSnapshot, next);
         }
     }
 
     private void Localizer_Changed(object? sender, EventArgs e)
     {
-        var targetDispatcher = dispatcher;
-        if (targetDispatcher is null)
+        Dispatcher? targetDispatcher;
+        int version;
+        lock (gate)
         {
-            return;
-        }
-
-        void Refresh()
-        {
-            if (Application.Current is not { } application)
+            if (!isStarted || isDisposed)
             {
                 return;
             }
 
-            foreach (Window window in application.Windows)
-            {
-                ApplyCore(window);
-            }
+            targetDispatcher = dispatcher;
+            version = runVersion;
         }
 
-        if (targetDispatcher.CheckAccess())
+        if (
+            targetDispatcher is null
+            || targetDispatcher.HasShutdownStarted
+            || targetDispatcher.HasShutdownFinished
+            || !TryMarkRefreshPending(version)
+        )
         {
-            Refresh();
+            return;
         }
-        else
+
+        try
         {
-            _ = targetDispatcher.BeginInvoke(DispatcherPriority.DataBind, Refresh);
+            _ = targetDispatcher.BeginInvoke(
+                DispatcherPriority.DataBind,
+                () => RefreshPending(version, targetDispatcher)
+            );
+        }
+        catch (InvalidOperationException)
+        {
+            Interlocked.CompareExchange(ref refreshPending, 0, version);
         }
     }
 
-    private void ApplyCore(DependencyObject root)
+    private void RefreshPending(int version, Dispatcher targetDispatcher)
+    {
+        if (Volatile.Read(ref refreshPending) != version)
+        {
+            return;
+        }
+
+        Interlocked.CompareExchange(ref refreshPending, 0, version);
+        lock (gate)
+        {
+            if (
+                !isStarted
+                || isDisposed
+                || runVersion != version
+                || dispatcher != targetDispatcher
+            )
+            {
+                return;
+            }
+        }
+
+        RefreshTracked(targetDispatcher);
+    }
+
+    private void DiscoverTree(DependencyObject root)
     {
         var visited = new HashSet<DependencyObject>(ReferenceEqualityComparer.Instance);
         var pending = new Stack<DependencyObject>();
         pending.Push(root);
 
-        while (pending.Count > 0)
+        while (pending.TryPop(out var current))
         {
-            var current = pending.Pop();
             if (!visited.Add(current))
             {
                 continue;
             }
 
-            ApplyObject(current);
-            foreach (var child in EnumerateChildren(current))
-            {
-                pending.Push(child);
-            }
+            DiscoverObject(current);
+            PushChildren(current, pending);
         }
     }
 
-    private void ApplyObject(DependencyObject target)
+    private void DiscoverObject(DependencyObject target)
     {
-        ApplyLocalValues(target);
-        if (target is DataGrid dataGrid)
+        DiscoverLocalValues(target);
+        if (target is not DataGrid dataGrid)
         {
-            foreach (var column in dataGrid.Columns)
-            {
-                ApplyLocalValues(column);
-            }
+            return;
         }
 
-        if (target is ItemsControl { ItemsSource: IEnumerable items })
+        // DataGridColumn is neither a logical nor a visual child. Its local Header value is
+        // discovered here exactly once per column visit; there is no second Header special case.
+        for (var index = 0; index < dataGrid.Columns.Count; index++)
         {
-            foreach (var item in items.OfType<ILocalizable>())
-            {
-                item.ApplyLocalization();
-            }
+            DiscoverLocalValues(dataGrid.Columns[index]);
         }
     }
 
-    private void ApplyLocalValues(DependencyObject target)
+    private void DiscoverLocalValues(DependencyObject target)
     {
         var entries = target.GetLocalValueEnumerator();
         while (entries.MoveNext())
         {
-            var entry = entries.Current;
-            if (entry.Value is not string value || !ShouldLocalize(target, entry.Property))
+            var property = entries.Current.Property;
+            if (!ShouldLocalize(target, property))
             {
                 continue;
             }
 
-            var values = resourceKeys.GetOrCreateValue(target);
-            if (!values.TryGetValue(entry.Property, out var key))
+            DiscoverProperty(target, property, target.GetValue(property));
+        }
+    }
+
+    private void DiscoverProperty(
+        DependencyObject target,
+        DependencyProperty property,
+        object? current
+    )
+    {
+        if (trackedLookup.TryGetValue(target, out var trackedTarget))
+        {
+            var index = trackedTarget.IndexOf(property);
+            if (index >= 0)
             {
-                if (!Localizer.Contains(value))
+                var tracked = trackedTarget.Resources[index];
+                if (Equals(current, tracked.LastApplied))
                 {
+                    if (Localizer.TryParse(tracked.Key, out var translation))
+                    {
+                        SetTranslation(target, property, current, translation);
+                        tracked.LastApplied = translation;
+                    }
+                    else
+                    {
+                        RemoveTrackedResource(target, trackedTarget, index);
+                    }
+                }
+                else if (TryTranslate(current, out var key, out var translation))
+                {
+                    tracked.Key = key;
+                    SetTranslation(target, property, current, translation);
+                    tracked.LastApplied = translation;
+                }
+                else
+                {
+                    RemoveTrackedResource(target, trackedTarget, index);
+                }
+
+                return;
+            }
+        }
+
+        if (!TryTranslate(current, out var newKey, out var newTranslation))
+        {
+            return;
+        }
+
+        if (trackedTarget is null)
+        {
+            trackedTarget = new TrackedTarget(target);
+            trackedLookup.Add(target, trackedTarget);
+            trackedTargets.Add(new WeakReference<TrackedTarget>(trackedTarget));
+        }
+
+        trackedTarget.Resources.Add(new TrackedResource(property, newKey, newTranslation));
+        SetTranslation(target, property, current, newTranslation);
+    }
+
+    private void RefreshTracked(Dispatcher targetDispatcher)
+    {
+        for (var targetIndex = trackedTargets.Count - 1; targetIndex >= 0; targetIndex--)
+        {
+            if (!trackedTargets[targetIndex].TryGetTarget(out var trackedTarget))
+            {
+                trackedTargets.RemoveAt(targetIndex);
+                continue;
+            }
+
+            var target = trackedTarget.Target;
+
+            if (target.Dispatcher != targetDispatcher)
+            {
+                continue;
+            }
+
+            for (
+                var resourceIndex = trackedTarget.Resources.Count - 1;
+                resourceIndex >= 0;
+                resourceIndex--
+            )
+            {
+                var tracked = trackedTarget.Resources[resourceIndex];
+                var current = target.GetValue(tracked.Property);
+                string translation;
+                if (Equals(current, tracked.LastApplied))
+                {
+                    if (!Localizer.TryParse(tracked.Key, out translation))
+                    {
+                        trackedTarget.Resources.RemoveAt(resourceIndex);
+                        continue;
+                    }
+                }
+                else if (TryTranslate(current, out var key, out translation))
+                {
+                    tracked.Key = key;
+                }
+                else
+                {
+                    trackedTarget.Resources.RemoveAt(resourceIndex);
                     continue;
                 }
 
-                key = value;
-                values.Add(entry.Property, key);
+                SetTranslation(target, tracked.Property, current, translation);
+                tracked.LastApplied = translation;
             }
 
-            target.SetCurrentValue(entry.Property, Localizer.Parse(key));
+            if (trackedTarget.Resources.Count == 0)
+            {
+                trackedLookup.Remove(target);
+                trackedTargets.RemoveAt(targetIndex);
+            }
+        }
+    }
+
+    private void RemoveTrackedResource(
+        DependencyObject target,
+        TrackedTarget trackedTarget,
+        int resourceIndex
+    )
+    {
+        trackedTarget.Resources.RemoveAt(resourceIndex);
+        if (trackedTarget.Resources.Count != 0)
+        {
+            return;
         }
 
-        if (target is DataGridColumn { Header: string header } column)
+        trackedLookup.Remove(target);
+        RemoveTrackedTargetFromRegistry(trackedTarget);
+    }
+
+    private void RemoveTrackedTargetFromRegistry(TrackedTarget trackedTarget)
+    {
+        for (var index = trackedTargets.Count - 1; index >= 0; index--)
         {
-            var values = resourceKeys.GetOrCreateValue(column);
-            if (!values.TryGetValue(DataGridColumn.HeaderProperty, out var key))
+            if (
+                !trackedTargets[index].TryGetTarget(out var candidate)
+                || ReferenceEquals(candidate, trackedTarget)
+            )
             {
-                if (!Localizer.Contains(header))
-                {
-                    return;
-                }
-
-                key = header;
-                values.Add(DataGridColumn.HeaderProperty, key);
+                trackedTargets.RemoveAt(index);
             }
+        }
+    }
 
-            column.SetCurrentValue(DataGridColumn.HeaderProperty, Localizer.Parse(key));
+    private static bool TryTranslate(
+        object? value,
+        out string key,
+        out string translation
+    )
+    {
+        if (
+            value is string token
+            && token.StartsWith(KeyToken.Prefix, StringComparison.Ordinal)
+            && Localizer.TryParse(token, out translation)
+        )
+        {
+            key = token;
+            return true;
+        }
+
+        key = string.Empty;
+        translation = string.Empty;
+        return false;
+    }
+
+    private static void SetTranslation(
+        DependencyObject target,
+        DependencyProperty property,
+        object? current,
+        string translation
+    )
+    {
+        if (!string.Equals(current as string, translation, StringComparison.Ordinal))
+        {
+            target.SetCurrentValue(property, translation);
         }
     }
 
@@ -313,7 +535,10 @@ public sealed class WpfLocalizationApplicator : IWpfLocalizationApplicator, IDis
             && target is not System.Windows.Controls.Primitives.TextBoxBase;
     }
 
-    private static IEnumerable<DependencyObject> EnumerateChildren(DependencyObject parent)
+    private static void PushChildren(
+        DependencyObject parent,
+        Stack<DependencyObject> pending
+    )
     {
         if (parent is FrameworkElement or FrameworkContentElement)
         {
@@ -321,20 +546,72 @@ public sealed class WpfLocalizationApplicator : IWpfLocalizationApplicator, IDis
             {
                 if (child is DependencyObject dependencyObject)
                 {
-                    yield return dependencyObject;
+                    pending.Push(dependencyObject);
                 }
             }
         }
 
         if (parent is not Visual and not System.Windows.Media.Media3D.Visual3D)
         {
-            yield break;
+            return;
         }
 
         var count = VisualTreeHelper.GetChildrenCount(parent);
         for (var index = 0; index < count; index++)
         {
-            yield return VisualTreeHelper.GetChild(parent, index);
+            pending.Push(VisualTreeHelper.GetChild(parent, index));
         }
+    }
+
+    private static int NextVersion(int current) => current == int.MaxValue ? 1 : current + 1;
+
+    private bool TryMarkRefreshPending(int version)
+    {
+        while (true)
+        {
+            var pending = Volatile.Read(ref refreshPending);
+            if (pending == version)
+            {
+                return false;
+            }
+
+            if (Interlocked.CompareExchange(ref refreshPending, version, pending) == pending)
+            {
+                return true;
+            }
+        }
+    }
+
+    private sealed class TrackedTarget(DependencyObject target)
+    {
+        internal DependencyObject Target { get; } = target;
+
+        internal List<TrackedResource> Resources { get; } = [];
+
+        internal int IndexOf(DependencyProperty property)
+        {
+            for (var index = 0; index < Resources.Count; index++)
+            {
+                if (Resources[index].Property == property)
+                {
+                    return index;
+                }
+            }
+
+            return -1;
+        }
+    }
+
+    private sealed class TrackedResource(
+        DependencyProperty property,
+        string key,
+        string lastApplied
+    )
+    {
+        internal DependencyProperty Property { get; } = property;
+
+        internal string Key { get; set; } = key;
+
+        internal string LastApplied { get; set; } = lastApplied;
     }
 }

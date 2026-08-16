@@ -7,10 +7,6 @@
     "en-US": "Hello World",
     "zh-CN": "你好世界"
   },
-  "Hello_World": {
-    "en-US": "Hello World",
-    "zh-CN": "你好世界"
-  },
   "Description": {
     "en-US": "Strongly typed keys and instant culture switching.",
     "zh-CN": "强类型键，即时切换文化。"

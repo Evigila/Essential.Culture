@@ -1,32 +1,29 @@
 using System.Collections.Frozen;
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace Arkheide.Essential.Culture;
 
 /// <summary>Owns the process-wide Culture.json catalog and its dynamic culture state.</summary>
-internal sealed partial class LocalizationRuntime : ILocalizer
+internal sealed class LocalizationRuntime
 {
-    private static readonly Lazy<LocalizationRuntime> SharedRuntime = new(
-        static () =>
-            new LocalizationRuntime(
+    private static class SharedHolder
+    {
+        internal static readonly LocalizationRuntime Instance = new(
                 Path.Combine(AppContext.BaseDirectory, "Culture.json"),
                 "en-US",
                 "en-US"
-            ),
-        LazyThreadSafetyMode.ExecutionAndPublication
-    );
-    private readonly Lock gate = new();
-    private readonly string sourcePath;
-    private readonly string fallback;
-    private IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> values =
-        new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal);
-    private IReadOnlyList<string> availableCultures = [];
-    private IReadOnlySet<string> keys = new HashSet<string>(StringComparer.Ordinal);
-    private string current;
+            );
+    }
 
-    internal static LocalizationRuntime Shared => SharedRuntime.Value;
+    private readonly Lock stateGate = new();
+    private readonly Catalog catalog;
+    private readonly Dictionary<string, RuntimeState> stateCache =
+        new(StringComparer.OrdinalIgnoreCase);
+    private RuntimeState state;
+
+    internal static LocalizationRuntime Shared => SharedHolder.Instance;
 
     internal LocalizationRuntime(string path, string current, string fallback = "en-US")
     {
@@ -35,143 +32,233 @@ internal sealed partial class LocalizationRuntime : ILocalizer
             throw new ArgumentException("The file path cannot be empty.", nameof(path));
         }
 
-        sourcePath = Path.GetFullPath(path);
+        var sourcePath = Path.GetFullPath(path);
         if (!File.Exists(sourcePath))
         {
             throw new FileNotFoundException($"File '{sourcePath}' does not exist.", sourcePath);
         }
 
-        this.current = KeyValidation.NormalizeCulture(current, nameof(current));
-        this.fallback = KeyValidation.NormalizeCulture(fallback, nameof(fallback));
-        var document = LoadDocument(sourcePath, this.fallback);
-        ApplyDocument(document);
+        var normalizedFallback = KeyValidation.NormalizeCulture(fallback, nameof(fallback));
+        catalog = LoadDocument(sourcePath, normalizedFallback);
+        state = CreateState(
+            catalog,
+            KeyValidation.NormalizeCulture(current, nameof(current))
+        );
+        CacheStateIfBounded(state);
     }
 
-    internal string SourcePath => sourcePath;
+    internal string Culture => Volatile.Read(ref state).Culture;
 
-    /// <inheritdoc />
-    public string Culture
-    {
-        get
-        {
-            lock (gate)
-            {
-                return current;
-            }
-        }
-    }
+    internal IReadOnlyList<string> AvailableCultures => catalog.Cultures;
 
-    internal string Fallback => fallback;
+    internal event EventHandler? Changed;
 
-    /// <inheritdoc />
-    public IReadOnlyList<string> AvailableCultures
-    {
-        get
-        {
-            lock (gate)
-            {
-                return availableCultures;
-            }
-        }
-    }
-
-    /// <inheritdoc />
-    internal IReadOnlySet<string> Keys
-    {
-        get
-        {
-            lock (gate)
-            {
-                return keys;
-            }
-        }
-    }
-
-    /// <inheritdoc />
-    public event EventHandler? Changed;
-
-    public void SetCulture(string culture)
+    internal void SetCulture(string culture)
     {
         var normalized = KeyValidation.NormalizeCulture(culture, nameof(culture));
-        lock (gate)
+        lock (stateGate)
         {
-            if (string.Equals(current, normalized, StringComparison.Ordinal))
+            if (string.Equals(state.Culture, normalized, StringComparison.Ordinal))
             {
                 return;
             }
 
-            current = normalized;
+            if (!stateCache.TryGetValue(normalized, out var next))
+            {
+                next = CreateState(catalog, normalized);
+                CacheStateIfBounded(next);
+            }
+
+            Volatile.Write(ref state, next);
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    public bool Contains(string key)
+    internal bool Contains(string token) => TryResolve(Volatile.Read(ref state), token, out _);
+
+    internal bool TryParse(string token, out string value)
     {
-        if (!KeyToken.TryGetKey(key, out var rawKey))
+        if (TryResolve(Volatile.Read(ref state), token, out var resolved))
         {
-            return false;
+            value = resolved.Text;
+            return true;
         }
 
-        lock (gate)
-        {
-            return values.ContainsKey(rawKey);
-        }
+        value = string.Empty;
+        return false;
     }
 
-    public string Parse(string key) => Parse(key, []);
+    internal string Parse(string token)
+    {
+        var resolved = ResolveOrFallback(Volatile.Read(ref state), token);
+        return resolved?.Text ?? token;
+    }
 
-    public string Parse(string key, params object?[] arguments)
+    internal string Parse(string token, params object?[] arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments);
-        if (!KeyToken.TryGetKey(key, out var rawKey))
+        var snapshot = Volatile.Read(ref state);
+        var resolved = ResolveOrFallback(snapshot, token);
+        if (resolved is null)
         {
-            throw new ArgumentException("Value invalid.", nameof(key));
-        }
-
-        string resolved;
-        string selectedCulture;
-        lock (gate)
-        {
-            if (!values.TryGetValue(rawKey, out var translations))
-            {
-                resolved = key;
-            }
-            else
-            {
-                resolved =
-                    TryGetTranslation(translations, current)
-                    ?? TryGetTranslation(translations, fallback)
-                    ?? key;
-            }
-
-            selectedCulture = current;
+            return token;
         }
 
         return arguments.Length == 0
-            ? resolved
-            : string.Format(GetFormatCulture(selectedCulture), resolved, arguments);
+            ? resolved.Text
+            : string.Format(snapshot.FormatCulture, resolved.Format, arguments);
     }
 
-    internal void Reload()
+    internal string Parse<TArg0>(string token, TArg0 argument0)
     {
-        var document = LoadDocument(sourcePath, fallback);
-        lock (gate)
+        var snapshot = Volatile.Read(ref state);
+        var resolved = ResolveOrFallback(snapshot, token);
+        return resolved is null
+            ? token
+            : string.Format(snapshot.FormatCulture, resolved.Format, argument0);
+    }
+
+    internal string Parse<TArg0, TArg1>(string token, TArg0 argument0, TArg1 argument1)
+    {
+        var snapshot = Volatile.Read(ref state);
+        var resolved = ResolveOrFallback(snapshot, token);
+        return resolved is null
+            ? token
+            : string.Format(snapshot.FormatCulture, resolved.Format, argument0, argument1);
+    }
+
+    internal string Parse<TArg0, TArg1, TArg2>(
+        string token,
+        TArg0 argument0,
+        TArg1 argument1,
+        TArg2 argument2
+    )
+    {
+        var snapshot = Volatile.Read(ref state);
+        var resolved = ResolveOrFallback(snapshot, token);
+        return resolved is null
+            ? token
+            : string.Format(
+                snapshot.FormatCulture,
+                resolved.Format,
+                argument0,
+                argument1,
+                argument2
+            );
+    }
+
+    private static Translation? ResolveOrFallback(RuntimeState snapshot, string token)
+    {
+        if (TryResolve(snapshot, token, out var resolved))
         {
-            ApplyDocument(document);
+            return resolved;
         }
 
-        Changed?.Invoke(this, EventArgs.Empty);
+        if (!KeyToken.TryGetKey(token, out _))
+        {
+            throw new ArgumentException("Value invalid.", nameof(token));
+        }
+
+        return null;
     }
 
-    private void ApplyDocument(ParsedDocument document)
+    private static bool TryResolve(
+        RuntimeState snapshot,
+        string? token,
+        out Translation translation
+    )
     {
-        values = document.Values;
-        availableCultures = document.Cultures;
-        keys = document.Keys;
+        if (token is not null)
+        {
+            // Generated tokens take this branch and are looked up verbatim: no substring and no regex.
+            var values = token.StartsWith(KeyToken.Prefix, StringComparison.Ordinal)
+                ? snapshot.TokenValues
+                : snapshot.RawValues;
+            if (values.TryGetValue(token, out translation!))
+            {
+                return true;
+            }
+        }
+
+        translation = null!;
+        return false;
     }
 
-    private static ParsedDocument LoadDocument(string path, string fallback)
+    private static RuntimeState CreateState(Catalog catalog, string culture)
+    {
+        var cultureChain = GetCultureChain(culture, catalog.Fallback);
+        var rawValues = new Dictionary<string, Translation>(catalog.Entries.Count, StringComparer.Ordinal);
+        var tokenValues = new Dictionary<string, Translation>(catalog.Entries.Count, StringComparer.Ordinal);
+        foreach (var (key, entry) in catalog.Entries)
+        {
+            var selected = SelectTranslation(entry.Translations, cultureChain);
+            rawValues.Add(key, selected);
+            tokenValues.Add(entry.Token, selected);
+        }
+
+        return new RuntimeState(
+            culture,
+            GetFormatCulture(culture),
+            rawValues.ToFrozenDictionary(StringComparer.Ordinal),
+            tokenValues.ToFrozenDictionary(StringComparer.Ordinal)
+        );
+    }
+
+    private void CacheStateIfBounded(RuntimeState snapshot)
+    {
+        // Declared cultures form a naturally bounded cache and cover normal UI toggles.
+        if (catalog.DeclaredCultures.Contains(snapshot.Culture))
+        {
+            stateCache.TryAdd(snapshot.Culture, snapshot);
+        }
+    }
+
+    private static Translation SelectTranslation(
+        FrozenDictionary<string, Translation> translations,
+        IReadOnlyList<string> cultureChain
+    )
+    {
+        foreach (var culture in cultureChain)
+        {
+            if (translations.TryGetValue(culture, out var translation))
+            {
+                return translation;
+            }
+        }
+
+        throw new InvalidOperationException("The validated fallback translation is missing.");
+    }
+
+    private static IReadOnlyList<string> GetCultureChain(string culture, string fallback)
+    {
+        var result = new List<string>(6);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        AddCultureAndParents(culture, result, seen);
+        AddCultureAndParents(fallback, result, seen);
+        return result;
+    }
+
+    private static void AddCultureAndParents(
+        string culture,
+        List<string> result,
+        HashSet<string> seen
+    )
+    {
+        while (seen.Add(culture))
+        {
+            result.Add(culture);
+            var separator = culture.LastIndexOf('-');
+            if (separator <= 0)
+            {
+                return;
+            }
+
+            culture = culture[..separator];
+        }
+    }
+
+    private static Catalog LoadDocument(string path, string fallback)
     {
         try
         {
@@ -189,44 +276,60 @@ internal sealed partial class LocalizationRuntime : ILocalizer
                 throw Invalid(path, "must contain a JSON object at its root");
             }
 
-            var entries = new Dictionary<string, IReadOnlyDictionary<string, string>>(
-                StringComparer.Ordinal
-            );
+            var entries = new Dictionary<string, CatalogEntry>(StringComparer.Ordinal);
             HashSet<string>? expectedCultures = null;
-            foreach (var entry in document.RootElement.EnumerateObject())
+            foreach (var property in document.RootElement.EnumerateObject())
             {
-                if (!KeyValidation.IsValidKey(entry.Name))
+                var key = property.Name;
+                if (!KeyValidation.IsValidKey(key))
                 {
-                    throw Invalid(path, $"contains illegal key '{entry.Name}'.");
+                    throw Invalid(path, $"contains illegal key '{key}'");
                 }
 
-                if (!entries.TryAdd(entry.Name, ParseTranslations(path, entry.Name, entry.Value)))
-                {
-                    throw Invalid(path, $"contains duplicate key '{entry.Name}'");
-                }
-
-                var cultures = entries[entry.Name].Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
-                if (!cultures.Contains(fallback))
+                var translations = ParseTranslations(path, key, property.Value);
+                if (!translations.ContainsKey(fallback))
                 {
                     throw Invalid(
                         path,
-                        $"key '{entry.Name}' does not define fallback culture '{fallback}'"
+                        $"key '{key}' does not define fallback culture '{fallback}'"
                     );
                 }
 
                 if (expectedCultures is null)
                 {
-                    expectedCultures = cultures;
+                    expectedCultures = new HashSet<string>(
+                        translations.Keys,
+                        StringComparer.OrdinalIgnoreCase
+                    );
                 }
-                else if (!expectedCultures.SetEquals(cultures))
+                else if (
+                    expectedCultures.Count != translations.Count
+                    || translations.Keys.Any(culture => !expectedCultures.Contains(culture))
+                )
                 {
                     throw Invalid(
                         path,
-                        $"key '{entry.Name}' does not define the same culture set as the other keys"
+                        $"key '{key}' does not define the same culture set as the other keys"
                     );
                 }
 
-                ValidateFormatPlaceholders(path, entry.Name, entries[entry.Name], fallback);
+                ValidateFormatPlaceholders(path, key, translations, fallback);
+                if (
+                    !entries.TryAdd(
+                        key,
+                        new CatalogEntry(
+                            KeyToken.Prefix + key,
+                            translations.ToFrozenDictionary(
+                                pair => pair.Key,
+                                pair => new Translation(pair.Value.Text, pair.Value.Format),
+                                StringComparer.OrdinalIgnoreCase
+                            )
+                        )
+                    )
+                )
+                {
+                    throw Invalid(path, $"contains duplicate key '{key}'");
+                }
             }
 
             if (entries.Count == 0 || expectedCultures is null)
@@ -234,14 +337,15 @@ internal sealed partial class LocalizationRuntime : ILocalizer
                 throw Invalid(path, "does not contain any translation keys");
             }
 
-            return new ParsedDocument(
-                entries,
+            return new Catalog(
+                entries.ToFrozenDictionary(StringComparer.Ordinal),
                 Array.AsReadOnly(
                     expectedCultures
                         .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
                         .ToArray()
                 ),
-                entries.Keys.ToFrozenSet(StringComparer.Ordinal)
+                expectedCultures.ToFrozenSet(StringComparer.OrdinalIgnoreCase),
+                fallback
             );
         }
         catch (InvalidDataException)
@@ -258,7 +362,7 @@ internal sealed partial class LocalizationRuntime : ILocalizer
         }
     }
 
-    private static Dictionary<string, string> ParseTranslations(
+    private static Dictionary<string, ParsedTranslation> ParseTranslations(
         string path,
         string key,
         JsonElement element
@@ -269,35 +373,56 @@ internal sealed partial class LocalizationRuntime : ILocalizer
             throw Invalid(path, $"key '{key}' must contain a culture-to-string object");
         }
 
-        var translations = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var translation in element.EnumerateObject())
+        var translations = new Dictionary<string, ParsedTranslation>(
+            StringComparer.OrdinalIgnoreCase
+        );
+        foreach (var property in element.EnumerateObject())
         {
             string culture;
             try
             {
-                culture = KeyValidation.NormalizeCulture(translation.Name, translation.Name);
+                culture = KeyValidation.NormalizeCulture(property.Name, property.Name);
             }
             catch (ArgumentException error)
             {
                 throw Invalid(
                     path,
-                    $"key '{key}' contains invalid culture '{translation.Name}'",
+                    $"key '{key}' contains invalid culture '{property.Name}'",
+                    error
+                );
+            }
+
+            var value = property.Value.ValueKind == JsonValueKind.String
+                ? property.Value.GetString()
+                : null;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw Invalid(
+                    path,
+                    $"key '{key}' contains an empty or non-string value for culture '{property.Name}'"
+                );
+            }
+
+            CompositeFormat format;
+            try
+            {
+                format = CompositeFormat.Parse(value);
+            }
+            catch (FormatException error)
+            {
+                throw Invalid(
+                    path,
+                    $"key '{key}' contains an invalid composite format for culture '{property.Name}'",
                     error
                 );
             }
 
             if (
-                translation.Value.ValueKind != JsonValueKind.String
-                || string.IsNullOrWhiteSpace(translation.Value.GetString())
+                !translations.TryAdd(
+                    culture,
+                    new ParsedTranslation(value, format, GetPlaceholderIndexes(value))
+                )
             )
-            {
-                throw Invalid(
-                    path,
-                    $"key '{key}' contains an empty or non-string value for culture '{translation.Name}'"
-                );
-            }
-
-            if (!translations.TryAdd(culture, translation.Value.GetString()!))
             {
                 throw Invalid(
                     path,
@@ -317,14 +442,14 @@ internal sealed partial class LocalizationRuntime : ILocalizer
     private static void ValidateFormatPlaceholders(
         string path,
         string key,
-        IReadOnlyDictionary<string, string> translations,
+        IReadOnlyDictionary<string, ParsedTranslation> translations,
         string fallback
     )
     {
-        var expected = GetPlaceholderIndexes(translations[fallback]);
-        foreach (var (culture, value) in translations)
+        var expected = translations[fallback].PlaceholderIndexes;
+        foreach (var (culture, translation) in translations)
         {
-            if (!expected.SequenceEqual(GetPlaceholderIndexes(value), StringComparer.Ordinal))
+            if (!expected.AsSpan().SequenceEqual(translation.PlaceholderIndexes))
             {
                 throw Invalid(
                     path,
@@ -334,46 +459,47 @@ internal sealed partial class LocalizationRuntime : ILocalizer
         }
     }
 
-    private static string[] GetPlaceholderIndexes(string value) =>
-        [
-            .. CompositeFormatItemPattern()
-                .Matches(value)
-                .Select(match => match.Groups["index"].Value)
-                .OrderBy(index => index, StringComparer.Ordinal),
-        ];
-
-    private static string? TryGetTranslation(
-        IReadOnlyDictionary<string, string> translations,
-        string culture
-    )
+    private static int[] GetPlaceholderIndexes(string value)
     {
-        if (translations.TryGetValue(culture, out var exact))
+        var indexes = new List<int>();
+        for (var position = 0; position < value.Length; position++)
         {
-            return exact;
-        }
-
-        var separator = culture.LastIndexOf('-');
-        while (separator > 0)
-        {
-            culture = culture[..separator];
-            if (translations.TryGetValue(culture, out var parent))
+            if (value[position] != '{')
             {
-                return parent;
+                continue;
             }
 
-            separator = culture.LastIndexOf('-');
+            if (position + 1 < value.Length && value[position + 1] == '{')
+            {
+                position++;
+                continue;
+            }
+
+            var index = 0;
+            position++;
+            while (position < value.Length && char.IsDigit(value[position]))
+            {
+                index = checked(index * 10 + value[position] - '0');
+                position++;
+            }
+
+            indexes.Add(index);
         }
 
-        return null;
+        indexes.Sort();
+        return [.. indexes];
     }
 
     private static CultureInfo GetFormatCulture(string culture)
     {
         try
         {
-            return CultureInfo.GetCultureInfo(culture);
+            var formatCulture = CultureInfo.GetCultureInfo(culture);
+            // Some syntactically valid private-use tags produce a CultureInfo without usable data.
+            _ = formatCulture.NumberFormat.NumberDecimalSeparator;
+            return formatCulture;
         }
-        catch (CultureNotFoundException)
+        catch (Exception error) when (error is CultureNotFoundException or NullReferenceException)
         {
             return CultureInfo.InvariantCulture;
         }
@@ -385,15 +511,30 @@ internal sealed partial class LocalizationRuntime : ILocalizer
         Exception? inner = null
     ) => new($"'{path}' {message}.", inner);
 
-    [GeneratedRegex(
-        @"(?<!\{)\{(?<index>\d+)(?:,[^{}]+)?(?::[^{}]+)?\}(?!\})",
-        RegexOptions.CultureInvariant
-    )]
-    private static partial Regex CompositeFormatItemPattern();
-
-    private sealed record ParsedDocument(
-        IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Values,
+    private sealed record Catalog(
+        FrozenDictionary<string, CatalogEntry> Entries,
         IReadOnlyList<string> Cultures,
-        IReadOnlySet<string> Keys
+        FrozenSet<string> DeclaredCultures,
+        string Fallback
+    );
+
+    private sealed record CatalogEntry(
+        string Token,
+        FrozenDictionary<string, Translation> Translations
+    );
+
+    private sealed record ParsedTranslation(
+        string Text,
+        CompositeFormat Format,
+        int[] PlaceholderIndexes
+    );
+
+    private sealed record Translation(string Text, CompositeFormat Format);
+
+    private sealed record RuntimeState(
+        string Culture,
+        CultureInfo FormatCulture,
+        FrozenDictionary<string, Translation> RawValues,
+        FrozenDictionary<string, Translation> TokenValues
     );
 }

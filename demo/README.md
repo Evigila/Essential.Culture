@@ -6,7 +6,7 @@
 | --- | --- |
 | [Console](Arkheide.Essential.Culture.Demo.Console/README.md) | `Localizer.Parse`、带参解析与交互式文化切换 |
 | [WPF](Arkheide.Essential.Culture.Demo.Wpf/README.md) | `WpfLocalizationApplicator` 的 `Start`、`Apply` 和释放 |
-| [Avalonia](Arkheide.Essential.Culture.Demo.Avalonia/README.md) | `AvaloniaLocalizationApplicator`、强类型 XAML 键和 ViewModel 刷新 |
+| [Avalonia](Arkheide.Essential.Culture.Demo.Avalonia/README.md) | `AvaloniaLocalizationApplicator`、强类型 XAML 键和即时文化切换 |
 | [WinUI 3](Arkheide.Essential.Culture.Demo.WinUI3/README.md) | `WinUILocalizationApplicator`、窗口 Attach 和 `x:Bind` 强类型键 |
 
 ## 构建

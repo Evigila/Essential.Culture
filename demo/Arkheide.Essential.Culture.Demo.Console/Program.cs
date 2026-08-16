@@ -1,13 +1,7 @@
 using Arkheide.Essential.Culture;
 using GeneratedKey = Arkheide.Essential.Culture.Key;
 
-Localizer.Current.SetCulture("en-US");
 var messageHistory = new List<string>();
-Localizer.Current.Changed += (_, _) =>
-{
-    Console.WriteLine();
-    WriteScreen(messageHistory);
-};
 
 WriteScreen(messageHistory);
 while (true)
@@ -24,9 +18,10 @@ while (true)
             Localizer.Current.SetCulture(
                 Localizer.Current.Culture == "en-US" ? "zh-CN" : "en-US"
             );
+            WriteScreen(messageHistory);
             break;
         case "2":
-            WriteMessage(GeneratedKey.Hello_World, messageHistory);
+            WriteMessage(GeneratedKey.Greeting, messageHistory);
             break;
         case "3":
             return;

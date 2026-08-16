@@ -35,7 +35,6 @@ private Window? window;
 public App()
 {
     InitializeComponent();
-    Localizer.Current.SetCulture("en-US");
     applicator = new WinUILocalizationApplicator();
 }
 
@@ -47,7 +46,7 @@ protected override void OnLaunched(LaunchActivatedEventArgs args)
 }
 ```
 
-`Attach(window)` 必须在窗口所属 UI 线程、`Activate()` 之前调用。它会立即处理窗口标题和视觉树，在文化变化后通过该窗口的 `DispatcherQueue` 刷新，并在窗口关闭后停止跟踪。应用最终关闭时调用 `Dispose()`。
+`Attach(window)` 必须在窗口所属 UI 线程、`Activate()` 之前调用。首次有效激活会在 `x:Bind` 写入 token 后再发现一次属性，随后立即解除激活监听。文化变化只刷新已经登记的属性，不再重新扫描整棵视觉树；窗口关闭后会自动停止跟踪。应用最终关闭时调用 `Dispose()`。
 
 ## XAML 强类型键
 
@@ -78,7 +77,7 @@ CurrentCultureText.Text = Localizer.Parse(
 );
 ```
 
-`ContentDialog` 不属于窗口初始扫描到的视觉根，因此在显示前调用：
+`ContentDialog` 不属于窗口初始扫描到的视觉根，因此在显示前、UI 线程上调用：
 
 ```csharp
 var dialog = new ContentDialog
@@ -93,7 +92,7 @@ applicator.Apply(dialog);
 await dialog.ShowAsync();
 ```
 
-这会让标题、正文和关闭按钮按当前文化解析。窗口关闭时会退订自己的 `Localizer.Current.Changed` 处理器。
+这会让标题、正文和关闭按钮按当前文化解析。独立根使用弱登记，关闭后的对话框不会被窗口长期持有；窗口关闭时会退订自己的 `Localizer.Current.Changed` 处理器。
 
 ## 运行与验证
 
@@ -103,7 +102,9 @@ dotnet run --project demo\Arkheide.Essential.Culture.Demo.WinUI3\Arkheide.Essent
 
 请验证：
 
-- 窗口标题、标题文本、描述和按钮在首次激活前已本地化。
+- 窗口首次显示时，标题栏、标题文本、描述和按钮已经本地化。
 - 切换语言后所有静态 XAML 文本和文化指示器同步刷新。
 - 连续打开 `ContentDialog` 多次后仍能正常切换语言。
 - 对话框标题、正文和关闭按钮始终采用当前文化。
+- 反复 Alt+Tab、最小化和恢复窗口后文案不回退为 token，也不会产生可感知卡顿。
+- 连续打开并关闭对话框至少 20 次，主窗口仍可切换文化且内存不会随每次弹窗持续线性增长。

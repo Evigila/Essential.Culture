@@ -10,71 +10,66 @@ namespace Arkheide.Essential.Culture.WinUI;
 /// Resolves Key tokens stored in common WinUI display dependency properties and refreshes
 /// attached windows when the active culture changes.
 /// </summary>
-public sealed partial class WinUILocalizationApplicator : IWinUILocalizationApplicator, IDisposable
+public sealed class WinUILocalizationApplicator : IWinUILocalizationApplicator
 {
-    private static readonly PropertyRule[] LocalizableProperties =
-    [
-        new("TextBlockText", TextBlock.TextProperty, static target => target is TextBlock),
-        new(
-            "ContentControlContent",
-            ContentControl.ContentProperty,
-            static target => target is ContentControl
-        ),
-        new(
-            "ContentDialogTitle",
-            ContentDialog.TitleProperty,
-            static target => target is ContentDialog
-        ),
-        new(
-            "ContentDialogPrimaryButtonText",
-            ContentDialog.PrimaryButtonTextProperty,
-            static target => target is ContentDialog
-        ),
-        new(
-            "ContentDialogSecondaryButtonText",
-            ContentDialog.SecondaryButtonTextProperty,
-            static target => target is ContentDialog
-        ),
-        new(
-            "ContentDialogCloseButtonText",
-            ContentDialog.CloseButtonTextProperty,
-            static target => target is ContentDialog
-        ),
-        new(
-            "TextBoxPlaceholder",
-            TextBox.PlaceholderTextProperty,
-            static target => target is TextBox
-        ),
-        new(
-            "PasswordBoxPlaceholder",
-            PasswordBox.PlaceholderTextProperty,
-            static target => target is PasswordBox
-        ),
-        new(
-            "RichEditBoxPlaceholder",
-            RichEditBox.PlaceholderTextProperty,
-            static target => target is RichEditBox
-        ),
-        new(
-            "AutoSuggestBoxPlaceholder",
-            AutoSuggestBox.PlaceholderTextProperty,
-            static target => target is AutoSuggestBox
-        ),
-        new("ToolTip", ToolTipService.ToolTipProperty, static _ => true),
-        new("AutomationName", AutomationProperties.NameProperty, static _ => true),
-    ];
+    private static readonly PropertyRule TextBlockText = new(
+        "TextBlockText",
+        TextBlock.TextProperty
+    );
+    private static readonly PropertyRule ContentControlContent = new(
+        "ContentControlContent",
+        ContentControl.ContentProperty
+    );
+    private static readonly PropertyRule ContentDialogTitle = new(
+        "ContentDialogTitle",
+        ContentDialog.TitleProperty
+    );
+    private static readonly PropertyRule ContentDialogPrimaryButtonText = new(
+        "ContentDialogPrimaryButtonText",
+        ContentDialog.PrimaryButtonTextProperty
+    );
+    private static readonly PropertyRule ContentDialogSecondaryButtonText = new(
+        "ContentDialogSecondaryButtonText",
+        ContentDialog.SecondaryButtonTextProperty
+    );
+    private static readonly PropertyRule ContentDialogCloseButtonText = new(
+        "ContentDialogCloseButtonText",
+        ContentDialog.CloseButtonTextProperty
+    );
+    private static readonly PropertyRule TextBoxPlaceholder = new(
+        "TextBoxPlaceholder",
+        TextBox.PlaceholderTextProperty
+    );
+    private static readonly PropertyRule PasswordBoxPlaceholder = new(
+        "PasswordBoxPlaceholder",
+        PasswordBox.PlaceholderTextProperty
+    );
+    private static readonly PropertyRule RichEditBoxPlaceholder = new(
+        "RichEditBoxPlaceholder",
+        RichEditBox.PlaceholderTextProperty
+    );
+    private static readonly PropertyRule AutoSuggestBoxPlaceholder = new(
+        "AutoSuggestBoxPlaceholder",
+        AutoSuggestBox.PlaceholderTextProperty
+    );
+    private static readonly PropertyRule ToolTip = new(
+        "ToolTip",
+        ToolTipService.ToolTipProperty
+    );
+    private static readonly PropertyRule AutomationName = new(
+        "AutomationName",
+        AutomationProperties.NameProperty
+    );
 
     private readonly Lock gate = new();
     private readonly Dictionary<Window, WindowRegistration> windows = new(
         ReferenceEqualityComparer.Instance
     );
+    private bool isChangedSubscribed;
     private bool isDisposed;
 
     /// <summary>Creates a WinUI applicator backed by the active localization runtime.</summary>
-    public WinUILocalizationApplicator()
-    {
-        Localizer.Current.Changed += Localizer_Changed;
-    }
+    public WinUILocalizationApplicator() { }
 
     /// <inheritdoc />
     public void Attach(Window window)
@@ -82,6 +77,7 @@ public sealed partial class WinUILocalizationApplicator : IWinUILocalizationAppl
         ArgumentNullException.ThrowIfNull(window);
         EnsureDispatcherAccess(window.DispatcherQueue, "attach");
 
+        WindowRegistration registration;
         lock (gate)
         {
             ObjectDisposedException.ThrowIf(isDisposed, this);
@@ -90,15 +86,25 @@ public sealed partial class WinUILocalizationApplicator : IWinUILocalizationAppl
                 return;
             }
 
-            windows.Add(
-                window,
-                new WindowRegistration(window.DispatcherQueue, CaptureWindowTitle(window))
-            );
+            registration = new WindowRegistration(this, window);
+            windows.Add(window, registration);
+            registration.SubscribeEvents();
+            if (!isChangedSubscribed)
+            {
+                Localizer.Current.Changed += Localizer_Changed;
+                isChangedSubscribed = true;
+            }
         }
 
-        window.Activated += Window_Activated;
-        window.Closed += Window_Closed;
-        ApplyWindow(window);
+        try
+        {
+            DiscoverWindow(registration);
+        }
+        catch
+        {
+            DetachCore(registration);
+            throw;
+        }
     }
 
     /// <inheritdoc />
@@ -107,43 +113,63 @@ public sealed partial class WinUILocalizationApplicator : IWinUILocalizationAppl
         ArgumentNullException.ThrowIfNull(window);
         EnsureDispatcherAccess(window.DispatcherQueue, "detach");
 
+        WindowRegistration? registration;
         lock (gate)
         {
-            if (!windows.Remove(window))
-            {
-                return;
-            }
+            windows.TryGetValue(window, out registration);
         }
 
-        window.Activated -= Window_Activated;
-        window.Closed -= Window_Closed;
+        if (registration is not null)
+        {
+            DetachCore(registration);
+        }
     }
 
     /// <inheritdoc />
     public void Apply(DependencyObject root)
     {
         ArgumentNullException.ThrowIfNull(root);
-        ObjectDisposedException.ThrowIf(isDisposed, this);
+        EnsureDispatcherAccess(root.DispatcherQueue, "apply localization to");
 
-        var dispatcherQueue = root.DispatcherQueue;
-        if (dispatcherQueue.HasThreadAccess)
+        WindowRegistration? registration = null;
+        WindowRegistration? dispatcherFallback = null;
+        lock (gate)
         {
-            ApplyCore(root);
-            return;
+            ObjectDisposedException.ThrowIf(isDisposed, this);
+            foreach (var candidate in windows.Values)
+            {
+                if (!ReferenceEquals(candidate.DispatcherQueue, root.DispatcherQueue))
+                {
+                    continue;
+                }
+
+                dispatcherFallback ??= candidate;
+                if (
+                    root is FrameworkElement { XamlRoot: { } xamlRoot }
+                    && candidate.Window.Content is FrameworkElement
+                    {
+                        XamlRoot: { } candidateXamlRoot,
+                    }
+                    && ReferenceEquals(xamlRoot, candidateXamlRoot)
+                )
+                {
+                    registration = candidate;
+                    break;
+                }
+            }
+
+            registration ??= dispatcherFallback;
         }
 
-        if (!dispatcherQueue.TryEnqueue(() => ApplyIfActive(root)))
-        {
-            throw new InvalidOperationException(
-                "The WinUI dispatcher is no longer accepting localization work."
-            );
-        }
+        var strongTracking = registration is not null
+            && ReferenceEquals(registration.Window.Content, root);
+        DiscoverTree(root, registration, strongTracking);
     }
 
     /// <summary>Stops all automatic window tracking and culture-change handling.</summary>
     public void Dispose()
     {
-        KeyValuePair<Window, WindowRegistration>[] registrations;
+        WindowRegistration[] registrations;
         lock (gate)
         {
             if (isDisposed)
@@ -152,48 +178,72 @@ public sealed partial class WinUILocalizationApplicator : IWinUILocalizationAppl
             }
 
             isDisposed = true;
-            registrations = [.. windows];
+            if (isChangedSubscribed)
+            {
+                Localizer.Current.Changed -= Localizer_Changed;
+                isChangedSubscribed = false;
+            }
+
+            registrations = [.. windows.Values];
             windows.Clear();
+            foreach (var registration in registrations)
+            {
+                registration.RefreshQueued = false;
+            }
         }
 
-        Localizer.Current.Changed -= Localizer_Changed;
-        foreach (var (window, registration) in registrations)
+        foreach (var registration in registrations)
         {
             if (registration.DispatcherQueue.HasThreadAccess)
             {
-                window.Activated -= Window_Activated;
-                window.Closed -= Window_Closed;
+                registration.UnsubscribeEvents();
+                registration.ReleaseTrackingOwnership();
             }
             else
             {
-                _ = registration.DispatcherQueue.TryEnqueue(() =>
+                if (
+                    !registration.DispatcherQueue.TryEnqueue(() =>
+                    {
+                        registration.UnsubscribeEvents();
+                        registration.ReleaseTrackingOwnership();
+                    })
+                )
                 {
-                    window.Activated -= Window_Activated;
-                    window.Closed -= Window_Closed;
-                });
+                    registration.ReleaseTrackingOwnership();
+                }
             }
         }
     }
 
-    private void Window_Activated(object sender, WindowActivatedEventArgs args)
+    private void Window_Activated(
+        WindowRegistration registration,
+        WindowActivatedEventArgs args
+    )
     {
-        if (sender is Window window)
+        if (args.WindowActivationState == WindowActivationState.Deactivated)
         {
-            RefreshWindowIfAttached(window);
+            return;
         }
+
+        lock (gate)
+        {
+            if (!IsAttached(registration) || !registration.InitialActivationPending)
+            {
+                return;
+            }
+
+            registration.InitialActivationPending = false;
+        }
+
+        registration.UnsubscribeActivated();
+        DiscoverWindowIfAttached(registration);
     }
 
-    private void Window_Closed(object sender, WindowEventArgs args)
-    {
-        if (sender is Window window)
-        {
-            Detach(window);
-        }
-    }
+    private void Window_Closed(WindowRegistration registration) => DetachCore(registration);
 
     private void Localizer_Changed(object? sender, EventArgs args)
     {
-        KeyValuePair<Window, WindowRegistration>[] registrations;
+        List<WindowRegistration> registrations;
         lock (gate)
         {
             if (isDisposed)
@@ -201,113 +251,115 @@ public sealed partial class WinUILocalizationApplicator : IWinUILocalizationAppl
                 return;
             }
 
-            registrations = [.. windows];
+            registrations = new List<WindowRegistration>(windows.Count);
+            foreach (var registration in windows.Values)
+            {
+                if (registration.RefreshQueued)
+                {
+                    continue;
+                }
+
+                registration.RefreshQueued = true;
+                registrations.Add(registration);
+            }
         }
 
-        foreach (var (window, registration) in registrations)
+        foreach (var registration in registrations)
         {
-            if (registration.DispatcherQueue.HasThreadAccess)
-            {
-                RefreshWindowIfAttached(window);
-            }
-            else
-            {
-                _ = registration.DispatcherQueue.TryEnqueue(
+            if (
+                !registration.DispatcherQueue.TryEnqueue(
                     DispatcherQueuePriority.Normal,
-                    () => RefreshWindowIfAttached(window)
-                );
-            }
-        }
-    }
-
-    private string? CaptureWindowTitle(Window window) =>
-        Localizer.Contains(window.Title) ? window.Title : null;
-
-    private void RefreshWindowIfAttached(Window window)
-    {
-        lock (gate)
-        {
-            if (isDisposed || !windows.ContainsKey(window))
+                    () => RefreshQueuedWindow(registration)
+                )
+            )
             {
-                return;
-            }
-        }
-
-        ApplyWindow(window);
-    }
-
-    private void ApplyWindow(Window window)
-    {
-        WindowRegistration registration;
-        lock (gate)
-        {
-            if (isDisposed || !windows.TryGetValue(window, out registration!))
-            {
-                return;
-            }
-        }
-
-        if (registration.Title is null && Localizer.Contains(window.Title))
-        {
-            registration.Title = new TrackedValue(window.Title, window.Title);
-        }
-
-        if (registration.Title is { } title)
-        {
-            if (!string.Equals(window.Title, title.LastResolved, StringComparison.Ordinal))
-            {
-                if (!Localizer.Contains(window.Title))
+                lock (gate)
                 {
-                    registration.Title = null;
-                }
-                else
-                {
-                    title.Key = window.Title;
+                    registration.RefreshQueued = false;
                 }
             }
-
-            if (registration.Title is not null)
-            {
-                var resolvedTitle = Localizer.Parse(title.Key);
-                title.LastResolved = resolvedTitle;
-                window.Title = resolvedTitle;
-            }
-        }
-
-        if (window.Content is DependencyObject root)
-        {
-            ApplyCore(root);
         }
     }
 
-    private void ApplyIfActive(DependencyObject root)
+    private void RefreshQueuedWindow(WindowRegistration registration)
     {
         lock (gate)
         {
-            if (isDisposed)
+            registration.RefreshQueued = false;
+            if (!IsAttached(registration))
             {
                 return;
             }
         }
 
-        ApplyCore(root);
+        registration.RefreshTrackedValues();
     }
 
-    private void ApplyCore(DependencyObject root)
+    private void DiscoverWindowIfAttached(WindowRegistration registration)
     {
-        var visited = new HashSet<DependencyObject>(ReferenceEqualityComparer.Instance);
+        lock (gate)
+        {
+            if (!IsAttached(registration))
+            {
+                return;
+            }
+        }
+
+        DiscoverWindow(registration);
+    }
+
+    private static void DiscoverWindow(WindowRegistration registration)
+    {
+        registration.DiscoverTitle();
+        if (registration.Window.Content is DependencyObject root)
+        {
+            DiscoverTree(root, registration, strongTracking: true);
+        }
+    }
+
+    private void DetachCore(WindowRegistration registration)
+    {
+        lock (gate)
+        {
+            if (
+                !windows.TryGetValue(registration.Window, out var current)
+                || !ReferenceEquals(current, registration)
+            )
+            {
+                return;
+            }
+
+            windows.Remove(registration.Window);
+            registration.RefreshQueued = false;
+            if (windows.Count == 0 && isChangedSubscribed)
+            {
+                Localizer.Current.Changed -= Localizer_Changed;
+                isChangedSubscribed = false;
+            }
+        }
+
+        registration.UnsubscribeEvents();
+        registration.ReleaseTrackingOwnership();
+    }
+
+    private bool IsAttached(WindowRegistration registration) =>
+        !isDisposed
+        && windows.TryGetValue(registration.Window, out var current)
+        && ReferenceEquals(current, registration);
+
+    private static void DiscoverTree(
+        DependencyObject root,
+        WindowRegistration? registration,
+        bool strongTracking
+    )
+    {
         var pending = new Stack<DependencyObject>();
         pending.Push(root);
 
         while (pending.Count > 0)
         {
             var current = pending.Pop();
-            if (!visited.Add(current))
-            {
-                continue;
-            }
-
-            ApplyObject(current);
+            DiscoverObject(current, registration, strongTracking);
             var childCount = VisualTreeHelper.GetChildrenCount(current);
             for (var index = 0; index < childCount; index++)
             {
@@ -316,64 +368,127 @@ public sealed partial class WinUILocalizationApplicator : IWinUILocalizationAppl
         }
     }
 
-    private static void ApplyObject(DependencyObject target)
+    private static void DiscoverObject(
+        DependencyObject target,
+        WindowRegistration? registration,
+        bool strongTracking
+    )
     {
-        foreach (var rule in LocalizableProperties)
+        if (target is TextBlock)
         {
-            if (!rule.AppliesTo(target))
+            DiscoverProperty(target, TextBlockText, registration, strongTracking);
+        }
+
+        if (target is ContentControl)
+        {
+            DiscoverProperty(target, ContentControlContent, registration, strongTracking);
+        }
+
+        if (target is ContentDialog)
+        {
+            DiscoverProperty(target, ContentDialogTitle, registration, strongTracking);
+            DiscoverProperty(target, ContentDialogPrimaryButtonText, registration, strongTracking);
+            DiscoverProperty(
+                target,
+                ContentDialogSecondaryButtonText,
+                registration,
+                strongTracking
+            );
+            DiscoverProperty(target, ContentDialogCloseButtonText, registration, strongTracking);
+        }
+
+        if (target is TextBox)
+        {
+            DiscoverProperty(target, TextBoxPlaceholder, registration, strongTracking);
+        }
+
+        if (target is PasswordBox)
+        {
+            DiscoverProperty(target, PasswordBoxPlaceholder, registration, strongTracking);
+        }
+
+        if (target is RichEditBox)
+        {
+            DiscoverProperty(target, RichEditBoxPlaceholder, registration, strongTracking);
+        }
+
+        if (target is AutoSuggestBox)
+        {
+            DiscoverProperty(target, AutoSuggestBoxPlaceholder, registration, strongTracking);
+        }
+
+        DiscoverProperty(target, ToolTip, registration, strongTracking);
+        DiscoverProperty(target, AutomationName, registration, strongTracking);
+    }
+
+    private static void DiscoverProperty(
+        DependencyObject target,
+        PropertyRule rule,
+        WindowRegistration? registration,
+        bool strongTracking
+    )
+    {
+        var localValue = target.ReadLocalValue(rule.Property);
+        var tracked = target.ReadLocalValue(rule.TrackingProperty) as TrackedProperty;
+        if (localValue is not string value)
+        {
+            tracked?.StopTracking(target, rule);
+            return;
+        }
+
+        if (tracked is null)
+        {
+            if (!TryResolveToken(value, out var resolved))
             {
-                continue;
+                return;
             }
 
-            var property = rule.Property;
-            var localValue = target.ReadLocalValue(property);
-            if (localValue is not string value)
-            {
-                ClearTrackedValue(target, rule);
-                continue;
-            }
+            tracked = new TrackedProperty(value, resolved);
+            target.SetValue(rule.TrackingProperty, tracked);
+            Track(registration, target, rule, tracked, strongTracking);
+            tracked.ApplyResolved(target, rule, resolved);
+            return;
+        }
 
-            var key = target.GetValue(rule.KeyProperty) as string;
-            var lastResolved = target.GetValue(rule.LastResolvedProperty) as string;
-            if (key is not null && !Localizer.Contains(key))
-            {
-                ClearTrackedValue(target, rule);
-                key = null;
-                lastResolved = null;
-            }
-
-            if (key is null)
-            {
-                if (!Localizer.Contains(value))
-                {
-                    continue;
-                }
-
-                key = value;
-                target.SetValue(rule.KeyProperty, key);
-            }
-            else if (!string.Equals(value, lastResolved, StringComparison.Ordinal))
-            {
-                if (!Localizer.Contains(value))
-                {
-                    ClearTrackedValue(target, rule);
-                    continue;
-                }
-
-                key = value;
-                target.SetValue(rule.KeyProperty, key);
-            }
-
-            var resolved = Localizer.Parse(key);
-            target.SetValue(rule.LastResolvedProperty, resolved);
-            target.SetValue(property, resolved);
+        Track(registration, target, rule, tracked, strongTracking);
+        if (!tracked.Refresh(target, rule, value))
+        {
+            tracked.StopTracking(target, rule);
         }
     }
 
-    private static void ClearTrackedValue(DependencyObject target, PropertyRule rule)
+    private static void Track(
+        WindowRegistration? registration,
+        DependencyObject target,
+        PropertyRule rule,
+        TrackedProperty tracked,
+        bool strongTracking
+    )
     {
-        target.ClearValue(rule.KeyProperty);
-        target.ClearValue(rule.LastResolvedProperty);
+        if (registration is null)
+        {
+            return;
+        }
+
+        if (strongTracking)
+        {
+            registration.TrackStrong(target, rule, tracked);
+        }
+        else
+        {
+            registration.TrackWeak(target, rule, tracked);
+        }
+    }
+
+    private static bool TryResolveToken(string value, out string resolved)
+    {
+        if (!value.StartsWith(KeyToken.Prefix, StringComparison.Ordinal))
+        {
+            resolved = value;
+            return false;
+        }
+
+        return Localizer.TryParse(value, out resolved);
     }
 
     private static void EnsureDispatcherAccess(DispatcherQueue dispatcherQueue, string operation)
@@ -381,17 +496,288 @@ public sealed partial class WinUILocalizationApplicator : IWinUILocalizationAppl
         if (!dispatcherQueue.HasThreadAccess)
         {
             throw new InvalidOperationException(
-                $"A WinUI window must be {operation}ed from its owning UI thread."
+                $"A WinUI object must be accessed from its owning UI thread to {operation}."
             );
         }
     }
 
-    private sealed class WindowRegistration(DispatcherQueue dispatcherQueue, string? titleKey)
+    private sealed class WindowRegistration(
+        WinUILocalizationApplicator owner,
+        Window window
+    )
     {
-        public DispatcherQueue DispatcherQueue { get; } = dispatcherQueue;
+        private readonly List<StrongTrackedProperty> strongProperties = [];
+        private readonly List<WeakTrackedProperty> weakProperties = [];
+        private bool isActivatedSubscribed;
+        private bool isClosedSubscribed;
+        private TrackedValue? title;
 
-        public TrackedValue? Title { get; set; } =
-            titleKey is null ? null : new TrackedValue(titleKey, titleKey);
+        public Window Window { get; } = window;
+
+        public DispatcherQueue DispatcherQueue { get; } = window.DispatcherQueue;
+
+        public bool InitialActivationPending { get; set; } = true;
+
+        public bool RefreshQueued { get; set; }
+
+        public void SubscribeEvents()
+        {
+            Window.Activated += Window_Activated;
+            Window.Closed += Window_Closed;
+            isActivatedSubscribed = true;
+            isClosedSubscribed = true;
+        }
+
+        public void UnsubscribeActivated()
+        {
+            if (!isActivatedSubscribed)
+            {
+                return;
+            }
+
+            Window.Activated -= Window_Activated;
+            isActivatedSubscribed = false;
+        }
+
+        public void UnsubscribeEvents()
+        {
+            UnsubscribeActivated();
+            if (!isClosedSubscribed)
+            {
+                return;
+            }
+
+            Window.Closed -= Window_Closed;
+            isClosedSubscribed = false;
+        }
+
+        public void DiscoverTitle() => RefreshTitle(allowDiscovery: true);
+
+        public void TrackStrong(
+            DependencyObject target,
+            PropertyRule rule,
+            TrackedProperty tracked
+        )
+        {
+            if (ReferenceEquals(tracked.StrongOwner, this))
+            {
+                return;
+            }
+
+            tracked.StrongOwner?.RemoveStrong(tracked);
+            tracked.StrongOwner = this;
+            tracked.WeakOwner = null;
+            strongProperties.Add(new StrongTrackedProperty(target, rule, tracked));
+        }
+
+        public void TrackWeak(
+            DependencyObject target,
+            PropertyRule rule,
+            TrackedProperty tracked
+        )
+        {
+            if (tracked.StrongOwner is not null || ReferenceEquals(tracked.WeakOwner, this))
+            {
+                return;
+            }
+
+            tracked.WeakOwner = this;
+            for (var index = weakProperties.Count - 1; index >= 0; index--)
+            {
+                if (!weakProperties[index].Target.TryGetTarget(out _))
+                {
+                    weakProperties.RemoveAt(index);
+                }
+            }
+
+            weakProperties.Add(
+                new WeakTrackedProperty(new WeakReference<DependencyObject>(target), rule, tracked)
+            );
+        }
+
+        public void RefreshTrackedValues()
+        {
+            RefreshTitle(allowDiscovery: false);
+            for (var index = strongProperties.Count - 1; index >= 0; index--)
+            {
+                var entry = strongProperties[index];
+                if (entry.State.Refresh(entry.Target, entry.Rule))
+                {
+                    continue;
+                }
+
+                entry.State.ClearAttachedValue(entry.Target, entry.Rule);
+                entry.State.StrongOwner = null;
+                strongProperties.RemoveAt(index);
+            }
+
+            for (var index = weakProperties.Count - 1; index >= 0; index--)
+            {
+                var entry = weakProperties[index];
+                if (
+                    !entry.Target.TryGetTarget(out var target)
+                    || !ReferenceEquals(entry.State.WeakOwner, this)
+                )
+                {
+                    weakProperties.RemoveAt(index);
+                    continue;
+                }
+
+                if (entry.State.Refresh(target, entry.Rule))
+                {
+                    continue;
+                }
+
+                entry.State.ClearAttachedValue(target, entry.Rule);
+                entry.State.WeakOwner = null;
+                weakProperties.RemoveAt(index);
+            }
+        }
+
+        public void RemoveStrong(TrackedProperty tracked)
+        {
+            strongProperties.RemoveAll(entry => ReferenceEquals(entry.State, tracked));
+            if (ReferenceEquals(tracked.StrongOwner, this))
+            {
+                tracked.StrongOwner = null;
+            }
+        }
+
+        public void ReleaseTrackingOwnership()
+        {
+            foreach (var entry in strongProperties)
+            {
+                if (ReferenceEquals(entry.State.StrongOwner, this))
+                {
+                    entry.State.StrongOwner = null;
+                }
+            }
+
+            foreach (var entry in weakProperties)
+            {
+                if (ReferenceEquals(entry.State.WeakOwner, this))
+                {
+                    entry.State.WeakOwner = null;
+                }
+            }
+
+            strongProperties.Clear();
+            weakProperties.Clear();
+            title = null;
+        }
+
+        private void RefreshTitle(bool allowDiscovery)
+        {
+            var value = Window.Title;
+            if (title is null)
+            {
+                if (!allowDiscovery || !TryResolveToken(value, out var discovered))
+                {
+                    return;
+                }
+
+                title = new TrackedValue(value, discovered);
+                Window.Title = discovered;
+                return;
+            }
+
+            string resolved;
+            if (!string.Equals(value, title.LastResolved, StringComparison.Ordinal))
+            {
+                if (!TryResolveToken(value, out resolved))
+                {
+                    title = null;
+                    return;
+                }
+
+                title.Key = value;
+            }
+            else if (!Localizer.TryParse(title.Key, out resolved))
+            {
+                title = null;
+                return;
+            }
+
+            title.LastResolved = resolved;
+            Window.Title = resolved;
+        }
+
+        private void Window_Activated(object sender, WindowActivatedEventArgs args) =>
+            owner.Window_Activated(this, args);
+
+        private void Window_Closed(object sender, WindowEventArgs args) => owner.Window_Closed(this);
+
+        private sealed record StrongTrackedProperty(
+            DependencyObject Target,
+            PropertyRule Rule,
+            TrackedProperty State
+        );
+
+        private sealed record WeakTrackedProperty(
+            WeakReference<DependencyObject> Target,
+            PropertyRule Rule,
+            TrackedProperty State
+        );
+    }
+
+    private sealed class TrackedProperty(string key, string lastResolved)
+    {
+        public WindowRegistration? StrongOwner { get; set; }
+
+        public WindowRegistration? WeakOwner { get; set; }
+
+        private string Key { get; set; } = key;
+
+        private string LastResolved { get; set; } = lastResolved;
+
+        public bool Refresh(DependencyObject target, PropertyRule rule)
+        {
+            var value = target.ReadLocalValue(rule.Property) as string;
+            return value is not null && Refresh(target, rule, value);
+        }
+
+        public bool Refresh(DependencyObject target, PropertyRule rule, string value)
+        {
+            string resolved;
+            if (!string.Equals(value, LastResolved, StringComparison.Ordinal))
+            {
+                if (!TryResolveToken(value, out resolved))
+                {
+                    return false;
+                }
+
+                Key = value;
+            }
+            else if (!Localizer.TryParse(Key, out resolved))
+            {
+                return false;
+            }
+
+            ApplyResolved(target, rule, resolved);
+            return true;
+        }
+
+        public void ApplyResolved(DependencyObject target, PropertyRule rule, string resolved)
+        {
+            LastResolved = resolved;
+            target.SetValue(rule.Property, resolved);
+        }
+
+        public void StopTracking(DependencyObject target, PropertyRule rule)
+        {
+            StrongOwner?.RemoveStrong(this);
+            StrongOwner = null;
+            WeakOwner = null;
+            ClearAttachedValue(target, rule);
+        }
+
+        public void ClearAttachedValue(DependencyObject target, PropertyRule rule)
+        {
+            if (ReferenceEquals(target.ReadLocalValue(rule.TrackingProperty), this))
+            {
+                target.ClearValue(rule.TrackingProperty);
+            }
+        }
     }
 
     private sealed class TrackedValue(string key, string lastResolved)
@@ -401,28 +787,14 @@ public sealed partial class WinUILocalizationApplicator : IWinUILocalizationAppl
         public string LastResolved { get; set; } = lastResolved;
     }
 
-    private sealed class PropertyRule(
-        string name,
-        DependencyProperty property,
-        Func<DependencyObject, bool> appliesTo
-    )
+    private sealed class PropertyRule(string name, DependencyProperty property)
     {
         public DependencyProperty Property { get; } = property;
 
-        public Func<DependencyObject, bool> AppliesTo { get; } = appliesTo;
-
-        public DependencyProperty KeyProperty { get; } =
+        public DependencyProperty TrackingProperty { get; } =
             DependencyProperty.RegisterAttached(
-                $"{name}Key",
-                typeof(string),
-                typeof(WinUILocalizationApplicator),
-                new PropertyMetadata(null)
-            );
-
-        public DependencyProperty LastResolvedProperty { get; } =
-            DependencyProperty.RegisterAttached(
-                $"{name}LastResolved",
-                typeof(string),
+                $"{name}Tracking",
+                typeof(object),
                 typeof(WinUILocalizationApplicator),
                 new PropertyMetadata(null)
             );

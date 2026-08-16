@@ -11,7 +11,6 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        Localizer.Current.SetCulture("en-US");
         applicator = new WpfLocalizationApplicator();
         applicator.Start(Dispatcher);
 
