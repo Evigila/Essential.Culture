@@ -96,6 +96,7 @@ public sealed partial class WinUILocalizationApplicator : IWinUILocalizationAppl
             );
         }
 
+        window.Activated += Window_Activated;
         window.Closed += Window_Closed;
         ApplyWindow(window);
     }
@@ -114,6 +115,7 @@ public sealed partial class WinUILocalizationApplicator : IWinUILocalizationAppl
             }
         }
 
+        window.Activated -= Window_Activated;
         window.Closed -= Window_Closed;
     }
 
@@ -159,12 +161,25 @@ public sealed partial class WinUILocalizationApplicator : IWinUILocalizationAppl
         {
             if (registration.DispatcherQueue.HasThreadAccess)
             {
+                window.Activated -= Window_Activated;
                 window.Closed -= Window_Closed;
             }
             else
             {
-                _ = registration.DispatcherQueue.TryEnqueue(() => window.Closed -= Window_Closed);
+                _ = registration.DispatcherQueue.TryEnqueue(() =>
+                {
+                    window.Activated -= Window_Activated;
+                    window.Closed -= Window_Closed;
+                });
             }
+        }
+    }
+
+    private void Window_Activated(object sender, WindowActivatedEventArgs args)
+    {
+        if (sender is Window window)
+        {
+            RefreshWindowIfAttached(window);
         }
     }
 
@@ -230,6 +245,11 @@ public sealed partial class WinUILocalizationApplicator : IWinUILocalizationAppl
             {
                 return;
             }
+        }
+
+        if (registration.Title is null && Localizer.Contains(window.Title))
+        {
+            registration.Title = new TrackedValue(window.Title, window.Title);
         }
 
         if (registration.Title is { } title)

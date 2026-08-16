@@ -1,46 +1,46 @@
 {
   "App_Title": {
-    "en-US": "Arkheide.Essential.Culture demo",
-    "zh-CN": "Arkheide.Essential.Culture 本地化演示"
+    "en-US": "Localization Demo",
+    "zh-CN": "本地化演示"
   },
   "Greeting": {
-    "en-US": "Hello from Arkheide.Essential.Culture!",
-    "zh-CN": "你好，Arkheide.Essential.Culture！"
+    "en-US": "Hello World",
+    "zh-CN": "你好世界"
   },
   "Hello_World": {
-    "en-US": "Hello World!",
-    "zh-CN": "你好，世界！"
+    "en-US": "Hello World",
+    "zh-CN": "你好世界"
   },
   "Description": {
-    "en-US": "One JSON document, strongly typed keys, and instant culture switching.",
-    "zh-CN": "一份 JSON、强类型键，以及即时的语言切换。"
+    "en-US": "Strongly typed keys and instant culture switching.",
+    "zh-CN": "强类型键，即时切换文化。"
   },
   "Current_Culture": {
     "en-US": "Current culture: {0}",
-    "zh-CN": "当前区域性：{0}"
+    "zh-CN": "当前文化：{0}"
   },
   "Action_SwitchLanguage": {
-    "en-US": "Switch to Chinese",
-    "zh-CN": "切换到英文"
+    "en-US": "Switch language",
+    "zh-CN": "切换语言"
   },
   "Action_ShowGreeting": {
-    "en-US": "Show greeting",
-    "zh-CN": "显示问候语"
+    "en-US": "Say hello",
+    "zh-CN": "问候"
   },
   "Action_Close": {
     "en-US": "Close",
     "zh-CN": "关闭"
   },
   "Console_Menu": {
-    "en-US": "Choose an action:\n1. Switch language\n2. Print Hello World\n3. Exit",
-    "zh-CN": "请选择操作：\n1. 切换语言\n2. 输出 Hello World\n3. 退出"
+    "en-US": "Actions:\n1. Switch language\n2. Hello World\n3. Exit",
+    "zh-CN": "操作：\n1. 切换语言\n2. 你好世界\n3. 退出"
   },
   "Console_Prompt": {
-    "en-US": "Selection: ",
-    "zh-CN": "请选择："
+    "en-US": "Select: ",
+    "zh-CN": "选择："
   },
   "Console_InvalidSelection": {
-    "en-US": "Please enter 1, 2, or 3.",
+    "en-US": "Enter 1, 2, or 3.",
     "zh-CN": "请输入 1、2 或 3。"
   }
 }

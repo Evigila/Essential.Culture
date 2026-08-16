@@ -1,6 +1,8 @@
 # Arkheide.Essential.Culture
 
-`Arkheide.Essential.Culture` 是一个面向 .NET 的 JSON 文本本地化组件。它使用一份 `Culture.json` 管理全部文化，通过 Source Generator 生成强类型键，并为 WPF、Avalonia 和 WinUI 3 提供运行时界面刷新。
+`Arkheide.Essential.Culture` 是一个面向 .NET 的 JSON 文本本地化组件。
+
+它使用一份 `Culture.json` 管理全部文化，通过 Source Generator 生成强类型键，并为 WPF、Avalonia 和 WinUI 3 提供运行时界面刷新。
 
 ## 功能
 
@@ -13,7 +15,7 @@
 
 ## 包
 
-公开包只有以下五个：
+公开包：
 
 | 包 | 用途 | 目标框架 |
 | --- | --- | --- |
