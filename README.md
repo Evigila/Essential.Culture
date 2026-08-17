@@ -1,55 +1,83 @@
 # Arkheide.Essential.Culture
 
-`Arkheide.Essential.Culture` 是一个面向 .NET 的 JSON 文本本地化组件。
+`Arkheide.Essential.Culture` 是一个面向 .NET 的 JSON 文化管理组件。
 
-它使用一份 `Culture.json` 管理全部文化，通过 Source Generator 生成强类型键，并为 WPF、Avalonia 和 WinUI 3 提供运行时界面刷新。
+它使用单一 `Culture.json` 管理文化键，通过 Source Generator 生成强类型键（源神启动！），并为 WPF、Avalonia 和 WinUI 3 提供运行时文化切换。
 
 ## 功能
 
-- 使用单个 `Culture.json` 管理资源键、文化和格式化文本。
-- 生成 `Arkheide.Essential.Culture.Key` 静态属性，为 C# 和 XAML 提供强类型键与编译期检查。
-- 通过 `Localizer.Parse(...)` 解析当前文化文本，通过 `Localizer.Current` 切换文化和监听变化。
-- 支持父文化查找、`en-US` fallback 和复合格式化。
-- WPF、Avalonia 和 WinUI 3 Applicator 会保存原始 token，并在文化变化后重新应用译文。
-- 默认从应用输出目录懒加载 `Culture.json`；核心无需显式初始化或清理。
-
-## 包
-
-公开包：
-
-| 包 | 用途 | 目标框架 |
-| --- | --- | --- |
-| `Arkheide.Essential.Culture` | 核心解析、文化状态与 `Localizer` 静态门面 | `net10.0` |
-| `Arkheide.Essential.Culture.Generator` | 从 `Culture.json` 生成强类型 `Arkheide.Essential.Culture.Key`；通常无需单独安装 | `netstandard2.0` Analyzer |
-| `Arkheide.Essential.Culture.Wpf` | WPF 视觉树本地化 Applicator | `net10.0-windows` |
-| `Arkheide.Essential.Culture.Avalonia` | Avalonia 视觉树本地化 Applicator | `net10.0` |
-| `Arkheide.Essential.Culture.WinUI` | WinUI 3 窗口与视觉树本地化 Applicator | `net10.0-windows10.0.19041.0` |
-
-框架包都会传递 Core，Core 再传递 Generator。Generator 只参与编译，不会成为应用的运行时程序集依赖。
-
-```powershell
-dotnet add package Arkheide.Essential.Culture
-dotnet add package Arkheide.Essential.Culture.Wpf
-dotnet add package Arkheide.Essential.Culture.Avalonia
-dotnet add package Arkheide.Essential.Culture.WinUI
-```
-
-普通 .NET 应用只安装 Core；UI 应用直接安装对应框架包。
+- `Culture.json` 是约定俗成的 JSON 名称，将自动被识别。
+- 源生成 `Arkheide.Essential.Culture.Key` 静态属性，为 C# 和 XAML 提供强类型键与编译期检查。
+- 通过 `Localizer.Parse(...)` 解析文化键，支持参数化
+- 通过 `Localizer.Current` 动态操作文化
 
 ## 快速开始
 
-在应用项目根目录创建 `Culture.json`：
+通过 Nuget 一键安装：
+
+如果是WPF项目：
+```
+```
+
+如果是AVALONIA项目：
+```
+```
+
+如果是WINUI3项目：
+```
+```
+
+其他：
+```
+```
+
+在应用项目根目录创建 `Culture.json`（或者它将会被自动创建），并根据需要创建你自己的文化键：
 
 ```json
 {
   "Greeting": {
     "en-US": "Hello, {0}!",
     "zh-CN": "你好，{0}！"
+  },
+  "Custom_Key": {
+    "en-US": "This is a custom key",
+    "zh-CN": "这是一个自定义键"
   }
 }
 ```
 
-NuGet 包会自动把该文件交给 Generator，并在构建和发布时复制到输出目录。Generator 默认产生：
+## 立即使用
+
+> [!NOTE]
+如果Intellisence没有反应，你应该尝试编译一次项目
+
+WPF 使用 `x:Static`：
+
+```xml
+<Window xmlns:ct="clr-namespace:Arkheide.Essential.Culture">
+  <TextBlock Text="{x:Static ct:Key.Greeting}" />
+</Window>
+```
+
+Avalonia 同样使用 `x:Static`，但命名空间使用 `using:` 语法：
+
+```xml
+<Window xmlns:ct="using:Arkheide.Essential.Culture">
+  <TextBlock Text="{x:Static ct:Key.Greeting}" />
+</Window>
+```
+
+WinUI 3 使用 `x:Bind`：
+
+```xml
+<Window xmlns:ct="using:Arkheide.Essential.Culture">
+  <TextBlock Text="{x:Bind ct:Key.Greeting, Mode=OneTime}" />
+</Window>
+```
+
+## 源生成
+
+Generator 会自动获取 `Culture.json`，并在构建和发布时复制到输出目录。以下是 Generator 的默认行为：
 
 ```csharp
 namespace Arkheide.Essential.Culture;
@@ -60,19 +88,21 @@ public static class Key
 }
 ```
 
-生成属性返回的是稳定 token，不是译文。应用通过静态门面解析和切换文化：
-
 ```csharp
 using Arkheide.Essential.Culture;
 using GeneratedKey = global::Arkheide.Essential.Culture.Key;
 
-Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting, "Arkheide.Essential.Culture"));
+// 输出译文（带参数）
+Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting, "World"));
 
+// 切换文化
 Localizer.Current.SetCulture("zh-CN");
-Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting, "Arkheide.Essential.Culture"));
-```
 
-`Localizer.Parse(token)` 解析无参数文本；`Localizer.Parse(token, args...)` 在当前文化下执行复合格式化。`Localizer.Current` 提供 `Culture`、`AvailableCultures`、`SetCulture(...)` 和 `Changed`。第一次访问时会从 `AppContext.BaseDirectory` 懒加载 `Culture.json`，默认文化与 fallback 均为 `en-US`。
+// 再次输出译文，无需管理文化切换
+Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting, "World"));
+```
+> [!NOTE]
+默认文化与 fallback 均为 `en-US`。
 
 如需覆盖生成类型所在命名空间，可在项目中设置：
 
@@ -82,48 +112,28 @@ Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting, "Arkheide.Essential.Cul
 </PropertyGroup>
 ```
 
-这只改变生成类型的 CLR 地址，属性值仍是稳定的 `Key.*` token。
+## 包
 
-## XAML 强类型键
+| 包 | 用途 |
+| --- | --- |
+| `Arkheide.Essential.Culture` | 解析文化状态与 `Localizer` 静态入口 |
+| `Arkheide.Essential.Culture.Generator` | 从 `Culture.json` 生成强类型键；通常自传递，无需单独安装 |
+| `Arkheide.Essential.Culture.Wpf` | WPF 视觉树本地化 Applicator |
+| `Arkheide.Essential.Culture.Avalonia` | Avalonia 视觉树本地化 Applicator |
+| `Arkheide.Essential.Culture.WinUI` | WinUI 3 窗口与视觉树本地化 Applicator |
 
-WPF 使用 `x:Static`：
-
-```xml
-<Window xmlns:culture="clr-namespace:Arkheide.Essential.Culture"
-        Title="{x:Static culture:Key.App_Title}">
-  <TextBlock Text="{x:Static culture:Key.Greeting}" />
-</Window>
+```powershell
+dotnet add package Arkheide.Essential.Culture
+dotnet add package Arkheide.Essential.Culture.Wpf
+dotnet add package Arkheide.Essential.Culture.Avalonia
+dotnet add package Arkheide.Essential.Culture.WinUI
 ```
 
-Avalonia 同样使用 `x:Static`，但命名空间映射使用 `using:` 语法：
+## AI 辅助
 
-```xml
-<Window xmlns:culture="using:Arkheide.Essential.Culture">
-  <TextBlock Text="{x:Static culture:Key.Greeting}" />
-</Window>
-```
-
-WinUI 3 使用静态属性的 `x:Bind`：
-
-```xml
-<Window xmlns:culture="using:Arkheide.Essential.Culture">
-  <TextBlock Text="{x:Bind culture:Key.Greeting, Mode=OneTime}" />
-</Window>
-```
-
-这些表达式在初始化时把 token 写入属性；对应 Applicator 随后写入译文，并在 `Localizer.Current.Changed` 后刷新。WinUI 的 `Mode=OneTime` 可避免绑定再次覆盖 Applicator 写入的值。
-
-强类型引用会在编译期检查成员。编辑器通常也能提供成员补全；首次生成或修改键后，如果 IntelliSense 尚未更新，请先构建一次项目，再重新打开补全列表。
-
-## UI Applicator 生命周期
-
-三个框架包都提供无参 Applicator，由应用显式管理：
-
-- WPF：`new WpfLocalizationApplicator()`，调用 `Start(Dispatcher)`；窗口显示前调用 `Apply(window)`；退出时调用 `Stop()` 或 `Dispose()`。
-- Avalonia：`new AvaloniaLocalizationApplicator()`，调用 `Start(Application)`；根视图呈现前调用 `Apply(root)`；退出时调用 `Stop()` 或 `Dispose()`。
-- WinUI 3：`new WinUILocalizationApplicator()`；窗口激活前调用 `Attach(window)`，独立对话框显示前调用 `Apply(dialog)`；关闭时调用 `Detach(window)` 或最终 `Dispose()`。
-
-这里需要清理的是 Applicator 的框架事件订阅；`Localizer` 核心自身不需要显式释放。
+> [!IMPORTANT]
+本库使用了 AI Agent (ChatGPT Codex) 技术来辅助编写。  
+欢迎使用任何形式的 AI 辅助进行维护和创作，**但在提交前人工审核是必要的**。
 
 ## 文档与示例
 
@@ -137,4 +147,4 @@ WinUI 3 使用静态属性的 `x:Bind`：
 
 ## 许可证
 
-Arkheide.Essential.Culture 使用 [MIT License](LICENSE.txt)。
+使用 [MIT License](LICENSE.txt)。
