@@ -5,9 +5,9 @@
 | 示例 | 展示内容 |
 | --- | --- |
 | [Console](Arkheide.Essential.Culture.Demo.Console/README.md) | `Localizer.Parse`、带参解析与交互式文化切换 |
-| [WPF](Arkheide.Essential.Culture.Demo.Wpf/README.md) | `WpfLocalizationApplicator` 的 `Start`、`Apply` 和释放 |
-| [Avalonia](Arkheide.Essential.Culture.Demo.Avalonia/README.md) | `AvaloniaLocalizationApplicator`、强类型 XAML 键和即时文化切换 |
-| [WinUI 3](Arkheide.Essential.Culture.Demo.WinUI3/README.md) | `WinUILocalizationApplicator`、窗口 Attach 和 `x:Bind` 强类型键 |
+| [WPF](Arkheide.Essential.Culture.Demo.Wpf/README.md) | `Localize` 参数 Binding 和无需扫描的文化刷新 |
+| [Avalonia](Arkheide.Essential.Culture.Demo.Avalonia/README.md) | `Localize` 参数 Binding、强类型 XAML 键和即时文化切换 |
+| [WinUI 3](Arkheide.Essential.Culture.Demo.WinUI3/README.md) | `Localize` 参数附加属性、窗口 Attach 和即时文化切换 |
 
 ## 构建
 
@@ -38,6 +38,6 @@ Demo 使用源码 `ProjectReference` 同时验证当前仓库代码。源码引�
 
 真实应用安装 Core、WPF、Avalonia 或 WinUI 包后，只需把 `Culture.json` 放在应用项目根目录；Generator 和复制约定会自动传递。
 
-三个 UI 示例均使用 Generator 产生的 CLR 属性：WPF/Avalonia 使用 `x:Static`，WinUI 3 使用 `x:Bind Mode=OneTime`。这些属性提供的是稳定 `Key.*` token；Applicator 保存 token、写入当前译文，并在 `Localizer.Current.Changed` 后重新应用。
+三个 UI 示例均只使用 Generator 产生的单命名空间 `Localize` API。WPF/Avalonia 由 `MultiBinding` 同时跟踪格式参数与文化变化；WinUI 3 由 MarkupExtension 提供内部标记，再由参数附加属性和窗口 Host 完成解析。共享 `Greeting` 键包含 `{0}`，三个示例都传入 `ProductName`，可直接验证参数与文化切换组合行为。
 
-每个 UI 示例都由应用显式创建并释放一个 Applicator。核心 `Localizer` 从输出目录懒加载资源文件，本身不需要初始化或清理。
+WPF/Avalonia 不需要应用级本地化对象。WinUI 3 因框架缺少 `MultiBinding`，仍需在窗口激活前登记刷新协调器。核心 `Localizer` 从输出目录懒加载资源文件，本身不需要初始化或清理。

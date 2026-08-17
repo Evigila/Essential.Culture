@@ -54,6 +54,31 @@ public static class Localizer
     public static bool TryParse(string token, out string value) =>
         LocalizationRuntime.Shared.TryParse(token, out value);
 
+    /// <summary>Attempts to resolve and format a stable token using the current culture.</summary>
+    public static bool TryParse(string token, object?[] arguments, out string value) =>
+        LocalizationRuntime.Shared.TryParse(token, arguments, out value);
+
+    /// <summary>Attempts to resolve and format a token without allocating an argument array.</summary>
+    public static bool TryParse<TArg0>(string token, TArg0 argument0, out string value) =>
+        LocalizationRuntime.Shared.TryParse(token, argument0, out value);
+
+    /// <summary>Attempts to resolve and format a token without allocating an argument array.</summary>
+    public static bool TryParse<TArg0, TArg1>(
+        string token,
+        TArg0 argument0,
+        TArg1 argument1,
+        out string value
+    ) => LocalizationRuntime.Shared.TryParse(token, argument0, argument1, out value);
+
+    /// <summary>Attempts to resolve and format a token without allocating an argument array.</summary>
+    public static bool TryParse<TArg0, TArg1, TArg2>(
+        string token,
+        TArg0 argument0,
+        TArg1 argument1,
+        TArg2 argument2,
+        out string value
+    ) => LocalizationRuntime.Shared.TryParse(token, argument0, argument1, argument2, out value);
+
     /// <summary>Returns whether a raw key or prefixed token is declared.</summary>
     public static bool Contains(string token) => LocalizationRuntime.Shared.Contains(token);
 }

@@ -2,8 +2,11 @@ using Microsoft.UI.Xaml;
 
 namespace Arkheide.Essential.Culture.WinUI;
 
-/// <summary>Applies Key tokens to WinUI windows and visual trees.</summary>
-public interface IWinUILocalizationApplicator : IDisposable
+/// <summary>
+/// Tracks values produced by the generated Localize markup extension in WinUI windows and visual
+/// trees.
+/// </summary>
+public interface IWinUILocalizationHost : IDisposable
 {
     /// <summary>
     /// Starts automatic localization for a window. Repeated calls for the same window are ignored.
@@ -14,8 +17,8 @@ public interface IWinUILocalizationApplicator : IDisposable
     void Detach(Window window);
 
     /// <summary>
-    /// Applies the current culture to one visual-tree root, such as a dialog or popup content.
-    /// The caller must be on the root's owning UI thread.
+    /// Tracks Localize values in one independent visual-tree root, such as XAML-created dialog or
+    /// popup content. The caller must be on the root's owning UI thread.
     /// </summary>
     void Apply(DependencyObject root);
 }

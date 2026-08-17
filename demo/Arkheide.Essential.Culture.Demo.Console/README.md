@@ -44,16 +44,16 @@ Localizer.Current.SetCulture(next);
 
 `Localizer.Parse(token)` 解析无参数文本；`Localizer.Parse(token, args...)` 使用当前文化执行复合格式化。需要响应文化变化的组件可以订阅 `Localizer.Current.Changed`。核心不需要显式初始化，也不需要在进程退出时清理。
 
-示例的消息历史保存稳定 token，而不是保存已经翻译的字符串：
+示例的消息历史保存稳定 token 和格式参数，而不是保存已经翻译的字符串：
 
 ```csharp
-var messageHistory = new List<string>();
-messageHistory.Add(GeneratedKey.Greeting);
+var messageHistory = new List<LocalizedMessage>();
+messageHistory.Add(new LocalizedMessage(GeneratedKey.Greeting, ["Arkheide"]));
 
 Localizer.Current.SetCulture("zh-CN");
 foreach (var message in messageHistory)
 {
-    Console.WriteLine(Localizer.Parse(message));
+    Console.WriteLine(Localizer.Parse(message.Token, message.Arguments));
 }
 ```
 

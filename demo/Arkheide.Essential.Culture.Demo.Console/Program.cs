@@ -1,7 +1,7 @@
 using Arkheide.Essential.Culture;
 using GeneratedKey = Arkheide.Essential.Culture.Key;
 
-var messageHistory = new List<string>();
+var messageHistory = new List<LocalizedMessage>();
 
 WriteScreen(messageHistory);
 while (true)
@@ -21,17 +21,17 @@ while (true)
             WriteScreen(messageHistory);
             break;
         case "2":
-            WriteMessage(GeneratedKey.Greeting, messageHistory);
+            WriteMessage(GeneratedKey.Greeting, ["Arkheide"], messageHistory);
             break;
         case "3":
             return;
         default:
-            WriteMessage(GeneratedKey.Console_InvalidSelection, messageHistory);
+            WriteMessage(GeneratedKey.Console_InvalidSelection, [], messageHistory);
             break;
     }
 }
 
-static void WriteScreen(IReadOnlyList<string> messageHistory)
+static void WriteScreen(IReadOnlyList<LocalizedMessage> messageHistory)
 {
     Console.WriteLine(Localizer.Parse(GeneratedKey.App_Title));
     Console.WriteLine(Localizer.Parse(GeneratedKey.Description));
@@ -41,7 +41,7 @@ static void WriteScreen(IReadOnlyList<string> messageHistory)
     Console.WriteLine();
     foreach (var message in messageHistory)
     {
-        Console.WriteLine(Localizer.Parse(message));
+        Console.WriteLine(Localizer.Parse(message.Token, message.Arguments));
     }
 
     if (messageHistory.Count > 0)
@@ -55,9 +55,15 @@ static void WriteScreen(IReadOnlyList<string> messageHistory)
 
 static void WritePrompt() => Console.Write(Localizer.Parse(GeneratedKey.Console_Prompt));
 
-static void WriteMessage(string token, ICollection<string> messageHistory)
+static void WriteMessage(
+    string token,
+    object?[] arguments,
+    ICollection<LocalizedMessage> messageHistory
+)
 {
-    messageHistory.Add(token);
-    Console.WriteLine(Localizer.Parse(token));
+    messageHistory.Add(new LocalizedMessage(token, arguments));
+    Console.WriteLine(Localizer.Parse(token, arguments));
     WritePrompt();
 }
+
+internal sealed record LocalizedMessage(string Token, object?[] Arguments);

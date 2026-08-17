@@ -89,6 +89,78 @@ internal sealed class LocalizationRuntime
         return false;
     }
 
+    internal bool TryParse(string token, object?[] arguments, out string value)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+        var snapshot = Volatile.Read(ref state);
+        if (!TryResolve(snapshot, token, out var resolved))
+        {
+            value = string.Empty;
+            return false;
+        }
+
+        value = arguments.Length == 0
+            ? resolved.Text
+            : string.Format(snapshot.FormatCulture, resolved.Format, arguments);
+        return true;
+    }
+
+    internal bool TryParse<TArg0>(string token, TArg0 argument0, out string value)
+    {
+        var snapshot = Volatile.Read(ref state);
+        if (!TryResolve(snapshot, token, out var resolved))
+        {
+            value = string.Empty;
+            return false;
+        }
+
+        value = string.Format(snapshot.FormatCulture, resolved.Format, argument0);
+        return true;
+    }
+
+    internal bool TryParse<TArg0, TArg1>(
+        string token,
+        TArg0 argument0,
+        TArg1 argument1,
+        out string value
+    )
+    {
+        var snapshot = Volatile.Read(ref state);
+        if (!TryResolve(snapshot, token, out var resolved))
+        {
+            value = string.Empty;
+            return false;
+        }
+
+        value = string.Format(snapshot.FormatCulture, resolved.Format, argument0, argument1);
+        return true;
+    }
+
+    internal bool TryParse<TArg0, TArg1, TArg2>(
+        string token,
+        TArg0 argument0,
+        TArg1 argument1,
+        TArg2 argument2,
+        out string value
+    )
+    {
+        var snapshot = Volatile.Read(ref state);
+        if (!TryResolve(snapshot, token, out var resolved))
+        {
+            value = string.Empty;
+            return false;
+        }
+
+        value = string.Format(
+            snapshot.FormatCulture,
+            resolved.Format,
+            argument0,
+            argument1,
+            argument2
+        );
+        return true;
+    }
+
     internal string Parse(string token)
     {
         var resolved = ResolveOrFallback(Volatile.Read(ref state), token);

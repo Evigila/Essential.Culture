@@ -1,8 +1,10 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:culture="using:Arkheide.Essential.Culture"
+        xmlns:local="using:Arkheide.Essential.Culture.Demo.Avalonia"
         x:Class="Arkheide.Essential.Culture.Demo.Avalonia.GreetingDialog"
-        Title="{x:Static culture:Key.App_Title}"
+        x:DataType="local:GreetingDialog"
+        Title="{culture:Localize App_Title}"
         Width="440"
         SizeToContent="Height"
         CanResize="False"
@@ -11,12 +13,17 @@
         Background="White"
         FontFamily="Segoe UI">
   <StackPanel Margin="32" Spacing="24">
-    <TextBlock Text="{x:Static culture:Key.Greeting}"
-               FontSize="20"
+    <TextBlock FontSize="20"
                FontWeight="SemiBold"
                Foreground="#1F2937"
-               TextWrapping="Wrap" />
-    <Button Content="{x:Static culture:Key.Action_Close}"
+               TextWrapping="Wrap">
+      <TextBlock.Text>
+        <culture:Localize Key="Greeting">
+          <Binding Path="ProductName" />
+        </culture:Localize>
+      </TextBlock.Text>
+    </TextBlock>
+    <Button Content="{culture:Localize Action_Close}"
             Click="Close_Click"
             MinWidth="120"
             Height="40"

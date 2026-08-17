@@ -7,7 +7,7 @@
     <UseWPF>true</UseWPF>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>Arkheide.Essential.Culture.Wpf</PackageId>
-    <Description>Automatic WPF visual-tree localization for Arkheide.Essential.Culture.</Description>
+    <Description>Strongly typed WPF XAML localization for Arkheide.Essential.Culture.</Description>
   </PropertyGroup>
 
   <ItemGroup>

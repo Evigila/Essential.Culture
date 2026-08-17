@@ -1,27 +1,25 @@
-using Arkheide.Essential.Culture.Avalonia;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using DemoKey = Arkheide.Essential.Culture.Key;
 
 namespace Arkheide.Essential.Culture.Demo.Avalonia;
 
-public partial class MainWindow : Window
+public partial class MainWindow : Window, INotifyPropertyChanged
 {
-    private readonly IAvaloniaLocalizationApplicator? applicator;
-
     public MainWindow()
     {
         InitializeComponent();
-    }
-
-    public MainWindow(IAvaloniaLocalizationApplicator applicator)
-        : this()
-    {
-        this.applicator = applicator;
+        DataContext = this;
         Localizer.Current.Changed += Localizer_Changed;
         Closed += MainWindow_Closed;
-        UpdateCultureText();
     }
+
+    public string CurrentCulture => Localizer.Current.Culture;
+
+    public string ProductName => "Arkheide";
+
+    public new event PropertyChangedEventHandler? PropertyChanged;
 
     private void SwitchLanguage_Click(object? sender, RoutedEventArgs e) =>
         Localizer.Current.SetCulture(
@@ -31,11 +29,11 @@ public partial class MainWindow : Window
     private async void ShowGreeting_Click(object? sender, RoutedEventArgs e)
     {
         var dialog = new GreetingDialog();
-        applicator?.Apply(dialog);
         await dialog.ShowDialog(this);
     }
 
-    private void Localizer_Changed(object? sender, EventArgs e) => UpdateCultureText();
+    private void Localizer_Changed(object? sender, EventArgs e) =>
+        OnPropertyChanged(nameof(CurrentCulture));
 
     private void MainWindow_Closed(object? sender, EventArgs e)
     {
@@ -43,9 +41,6 @@ public partial class MainWindow : Window
         Closed -= MainWindow_Closed;
     }
 
-    private void UpdateCultureText() =>
-        CurrentCultureText.Text = Localizer.Parse(
-            DemoKey.Current_Culture,
-            Localizer.Current.Culture
-        );
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

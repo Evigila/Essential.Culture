@@ -1,6 +1,6 @@
 # Arkheide.Essential.Culture Avalonia Demo
 
-这个示例展示 Avalonia 应用如何管理 `AvaloniaLocalizationApplicator`、使用强类型 XAML token，并即时切换文化。
+这个示例展示 Avalonia 应用如何只通过强类型 `Localize` 标记扩展完成无参数与参数化翻译，并即时切换文化。
 
 ## 依赖
 
@@ -12,70 +12,59 @@
 
 框架包会自动传递 Core 和 Generator。仓库内 Demo 为验证源码，使用项目引用并显式链接共享 [`../Culture.json`](../Culture.json)。
 
-## Applicator 生命周期
+## 应用初始化
 
-[`App.axaml.cs`](App.axaml.cs) 在桌面生命周期初始化时创建 Applicator 和窗口：
+[`App.axaml.cs`](App.axaml.cs) 不需要本地化服务的启动、扫描或释放逻辑，按普通 Avalonia 应用创建窗口即可：
 
 ```csharp
-private AvaloniaLocalizationApplicator? applicator;
-
 public override void OnFrameworkInitializationCompleted()
 {
     if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
     {
-        applicator = new AvaloniaLocalizationApplicator();
-        applicator.Start(this);
-
-        var window = new MainWindow(applicator);
-        applicator.Apply(window);
-        desktop.MainWindow = window;
-        desktop.Exit += Desktop_Exit;
+        desktop.MainWindow = new MainWindow();
     }
 
     base.OnFrameworkInitializationCompleted();
 }
 ```
 
-`Start(this)` 监听后续视觉树加载和文化变化；`Apply(window)` 在首次呈现前立即处理窗口。应用退出时释放 Applicator：
+## XAML 强类型本地化
 
-```csharp
-private void Desktop_Exit(
-    object? sender,
-    ControlledApplicationLifetimeExitEventArgs e)
-{
-    applicator?.Dispose();
-}
-```
-
-对话框是独立根，[`MainWindow.axaml.cs`](MainWindow.axaml.cs) 会在显示前调用 `applicator.Apply(dialog)`。
-
-## XAML 强类型键
-
-[`MainWindow.axaml`](MainWindow.axaml) 使用 `using:Arkheide.Essential.Culture` 和 `x:Static`：
+[`MainWindow.axaml`](MainWindow.axaml) 使用 `using:Arkheide.Essential.Culture` 下生成的 `Localize`：
 
 ```xml
 <Window xmlns:culture="using:Arkheide.Essential.Culture"
-        Title="{x:Static culture:Key.App_Title}">
-  <TextBlock Text="{x:Static culture:Key.Greeting}" />
-  <Button Content="{x:Static culture:Key.Action_SwitchLanguage}" />
+        Title="{culture:Localize App_Title}">
+  <TextBlock Text="{culture:Localize Greeting,
+                    Arg0={Binding ProductName}}" />
+  <Button Content="{culture:Localize Action_SwitchLanguage}" />
 </Window>
 ```
 
-`x:Static` 在编译时解析 Generator 产生的公开静态属性。属性值仍是 `Key.*` token；Applicator 保存 token、写入当前译文，并在 `Localizer.Current.Changed` 后刷新。
+位置键由 Generator 产生的 `CultureKey` 枚举约束。`Localize` 组合文化信号与参数 Binding，因此任一输入变化都会重新执行参数化解析。无参数翻译也使用同一个 API，所有翻译都遵循同一套 XAML 标准。
 
-## 当前文化文本
+参数较多时可以使用对象元素形式的 `Arguments` 内容集合：
 
-当前文化文本需要一个格式化参数，因此窗口仅保留一个简短刷新函数：
-
-```csharp
-private void UpdateCultureText() =>
-    CurrentCultureText.Text = Localizer.Parse(
-        DemoKey.Current_Culture,
-        Localizer.Current.Culture
-    );
+```xml
+<TextBlock.Text>
+  <culture:Localize Key="Greeting">
+    <Binding Path="ProductName" />
+  </culture:Localize>
+</TextBlock.Text>
 ```
 
-窗口在文化变化时调用该函数，并在关闭时退订事件。示例不引入 ViewModel、Command 或额外 MVVM 基础设施；语言按钮直接调用 `Localizer.Current.SetCulture(...)`。
+## 参数化文本
+
+共享 `Culture.json` 的 `Greeting` 与 `Current_Culture` 均包含 `{0}`。Demo 直接绑定 `ProductName` 和 `CurrentCulture`：
+
+```xml
+<TextBlock Text="{culture:Localize Greeting,
+                  Arg0={Binding ProductName}}" />
+<TextBlock Text="{culture:Localize Current_Culture,
+                  Arg0={Binding CurrentCulture}}" />
+```
+
+窗口在文化变化时更新 `CurrentCulture` 并触发 `PropertyChanged`，格式化由 `Localize` 负责。示例不引入额外 MVVM 基础设施；语言按钮直接调用 `Localizer.Current.SetCulture(...)`。
 
 ## 运行与验证
 
@@ -86,6 +75,7 @@ dotnet run --project demo\Arkheide.Essential.Culture.Demo.Avalonia\Arkheide.Esse
 请验证：
 
 - 主窗口标题、正文和按钮在首次显示时已经本地化。
-- 切换语言后 XAML 文本和当前文化文本同时刷新。
+- 问候文本始终显示 `Arkheide`，不会残留 `{0}`。
+- 切换语言后 XAML 文本和参数化当前文化文本同时刷新。
 - 问候对话框的标题、正文和关闭按钮使用当前语言。
-- 关闭应用后没有遗留的文化变化订阅。
+- 新打开的问候对话框不需要额外的本地化初始化。

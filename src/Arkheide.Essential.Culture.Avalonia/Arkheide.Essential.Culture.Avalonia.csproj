@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>Arkheide.Essential.Culture.Avalonia</PackageId>
-    <Description>Automatic Avalonia visual-tree localization for Arkheide.Essential.Culture.</Description>
+    <Description>Strongly typed Avalonia XAML localization bindings for Arkheide.Essential.Culture.</Description>
   </PropertyGroup>
 
   <ItemGroup>

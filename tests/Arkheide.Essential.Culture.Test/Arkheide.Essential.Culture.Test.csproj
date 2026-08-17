@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <ArkheideEssentialCultureXamlFramework>none</ArkheideEssentialCultureXamlFramework>
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
@@ -23,6 +24,7 @@
     <ProjectReference Include="..\..\src\Arkheide.Essential.Culture.Avalonia\Arkheide.Essential.Culture.Avalonia.csproj" />
     <ProjectReference Include="..\..\src\Arkheide.Essential.Culture.Wpf\Arkheide.Essential.Culture.Wpf.csproj" />
     <ProjectReference Include="..\..\src\Arkheide.Essential.Culture.Generator\Arkheide.Essential.Culture.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <CompilerVisibleProperty Include="ArkheideEssentialCultureXamlFramework" />
     <AdditionalFiles Include="Culture.json" />
     <None Update="Culture.json" CopyToOutputDirectory="PreserveNewest" />
     <Using Include="System.IO" />

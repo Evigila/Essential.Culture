@@ -7,28 +7,36 @@
 ## 功能
 
 - `Culture.json` 是约定俗成的 JSON 名称，将自动被识别。
-- 源生成 `Arkheide.Essential.Culture.Key` 静态属性，为 C# 和 XAML 提供强类型键与编译期检查。
-- 通过 `Localizer.Parse(...)` 解析文化键，支持参数化
-- 通过 `Localizer.Current` 动态操作文化
+- 源生成 `Key`、`CultureKey` 和统一的 `Localize` XAML API，提供强类型键与编译期检查。
+- 通过 `Localizer.Parse(...)` 和 `Localizer.TryParse(...)` 解析文化键，支持参数化。
+- 通过 `Localizer.Current` 动态操作文化。
 
 ## 快速开始
 
 通过 Nuget 一键安装：
 
-如果是WPF项目：
-```
+如果是 WPF 项目：
+
+```powershell
+dotnet add package Arkheide.Essential.Culture.Wpf
 ```
 
-如果是AVALONIA项目：
-```
+如果是 Avalonia 项目：
+
+```powershell
+dotnet add package Arkheide.Essential.Culture.Avalonia
 ```
 
-如果是WINUI3项目：
-```
+如果是 WinUI 3 项目：
+
+```powershell
+dotnet add package Arkheide.Essential.Culture.WinUI
 ```
 
 其他：
-```
+
+```powershell
+dotnet add package Arkheide.Essential.Culture
 ```
 
 项目会自动创建 `Culture.json` 并包含默认内容，你可以创建自己的键和译文：
@@ -39,9 +47,9 @@
     "en-US": "Hello, World!",
     "zh-CN": "你好，世界！"
   },
-  "Custom_Key": {
-    "en-US": "This is a custom message",
-    "zh-CN": "这是一句自定义译文"
+  "Welcome_User": {
+    "en-US": "Hello, {0}!",
+    "zh-CN": "你好，{0}！"
   }
 }
 ```
@@ -49,38 +57,49 @@
 ## 立即使用
 
 > [!NOTE]
-如果Intellisence没有反应，你应该尝试编译一次项目
+> 如果 IntelliSense 尚未显示生成类型，请先构建一次项目。
 
-WPF 使用 `x:Static`：
+WPF 使用统一的 `Localize` API，参数可以直接使用 Binding：
 
 ```xml
-<Window xmlns:ct="clr-namespace:Arkheide.Essential.Culture">
-  <TextBlock Text="{x:Static ct:Key.Greeting}" />
+<Window xmlns:culture="clr-namespace:Arkheide.Essential.Culture">
+  <TextBlock Text="{culture:Localize Greeting}" />
+  <TextBlock Text="{culture:Localize Welcome_User, Arg0={Binding UserName}}" />
 </Window>
 ```
 
-Avalonia 同样使用 `x:Static`，但命名空间使用 `using:` 语法：
+Avalonia 使用相同 API，仅命名空间语法不同：
 
 ```xml
-<Window xmlns:ct="using:Arkheide.Essential.Culture">
-  <TextBlock Text="{x:Static ct:Key.Greeting}" />
+<Window xmlns:culture="using:Arkheide.Essential.Culture">
+  <TextBlock Text="{culture:Localize Greeting}" />
+  <TextBlock Text="{culture:Localize Welcome_User, Arg0={Binding UserName}}" />
 </Window>
 ```
 
-WinUI 3 使用 `x:Bind`：
+WinUI 3 的自定义 MarkupExtension 必须使用 `Key=`，动态参数通过同一 `Localize` 类型的附加属性提供：
 
 ```xml
-<Window xmlns:ct="using:Arkheide.Essential.Culture">
-  <TextBlock Text="{x:Bind ct:Key.Greeting, Mode=OneTime}" />
+<Window xmlns:culture="using:Arkheide.Essential.Culture">
+  <TextBlock Text="{culture:Localize Key=Greeting}" />
+  <TextBlock Text="{culture:Localize Key=Welcome_User}"
+             culture:Localize.Argument0="{x:Bind ViewModel.UserName, Mode=OneWay}" />
 </Window>
 ```
+
+接口约定保持单一：C# 将 `Key.*` 交给 `Localizer`，XAML 只使用 `culture:Localize`。
 
 ## 源生成
 
-Generator 会自动获取 `Culture.json`，并在构建和发布时复制到输出目录。默认文件会生成以下类型：
+Generator 会自动获取 `Culture.json`，并在构建和发布时复制到输出目录。默认文件会生成 `CultureKey` 枚举、`Key` token，以及 UI 项目使用的 `Localize` 门面：
 
 ```csharp
 namespace Arkheide.Essential.Culture;
+
+public enum CultureKey
+{
+    Greeting,
+}
 
 public static class Key
 {
@@ -101,8 +120,9 @@ Localizer.Current.SetCulture("zh-CN");
 // 再次输出译文，无需管理文化切换
 Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting));
 ```
+
 > [!NOTE]
-默认文化与 fallback 均为 `en-US`。
+> 默认文化与 fallback 均为 `en-US`。
 
 如需覆盖生成类型所在命名空间，可在项目中设置：
 
@@ -126,9 +146,9 @@ Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting));
 | --- | --- |
 | `Arkheide.Essential.Culture` | 解析文化状态与 `Localizer` 静态入口 |
 | `Arkheide.Essential.Culture.Generator` | 从 `Culture.json` 生成强类型键；通常自传递，无需单独安装 |
-| `Arkheide.Essential.Culture.Wpf` | WPF 视觉树本地化 Applicator |
-| `Arkheide.Essential.Culture.Avalonia` | Avalonia 视觉树本地化 Applicator |
-| `Arkheide.Essential.Culture.WinUI` | WinUI 3 窗口与视觉树本地化 Applicator |
+| `Arkheide.Essential.Culture.Wpf` | WPF 强类型 `Localize` XAML Binding |
+| `Arkheide.Essential.Culture.Avalonia` | Avalonia 强类型 `Localize` XAML Binding |
+| `Arkheide.Essential.Culture.WinUI` | WinUI 3 强类型 `Localize` 与窗口刷新基础设施 |
 
 ```powershell
 dotnet add package Arkheide.Essential.Culture

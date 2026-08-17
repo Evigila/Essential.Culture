@@ -19,7 +19,16 @@ public sealed class LocalizerTests
         Assert.Equal("Count: 3", Localizer.Parse(GeneratedKey.Message_Count, 3));
         Assert.True(Localizer.TryParse(GeneratedKey.Title_Hello, out var value));
         Assert.Equal("Hello World!", value);
+        Assert.True(Localizer.TryParse(GeneratedKey.Message_Count, 3, out value));
+        Assert.Equal("Count: 3", value);
+        Assert.True(
+            Localizer.TryParse(GeneratedKey.Message_Count, new object?[] { 4 }, out value)
+        );
+        Assert.Equal("Count: 4", value);
         Assert.False(Localizer.TryParse("Key.Does_Not_Exist", out value));
+        Assert.False(
+            Localizer.TryParse("Key.Does_Not_Exist", new object?[] { 1 }, out value)
+        );
         Assert.Equal(string.Empty, value);
     }
 

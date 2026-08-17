@@ -5,19 +5,19 @@ namespace Arkheide.Essential.Culture.Demo.WinUI3;
 
 public partial class App : Application
 {
-    private readonly WinUILocalizationApplicator applicator;
+    private readonly WinUILocalizationHost localizationHost;
     private Window? window;
 
     public App()
     {
         InitializeComponent();
-        applicator = new WinUILocalizationApplicator();
+        localizationHost = new WinUILocalizationHost();
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        window = new MainWindow(applicator);
-        applicator.Attach(window);
+        window = new MainWindow();
+        localizationHost.Attach(window);
         window.Closed += Window_Closed;
         window.Activate();
     }
@@ -25,6 +25,6 @@ public partial class App : Application
     private void Window_Closed(object sender, WindowEventArgs args)
     {
         window = null;
-        applicator.Dispose();
+        localizationHost.Dispose();
     }
 }

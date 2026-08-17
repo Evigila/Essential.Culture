@@ -63,12 +63,140 @@ public sealed class CultureGeneratorTests
         Assert.Equal("Key.g.cs", generated.HintName);
         var source = generated.SourceText.ToString();
         Assert.Contains("namespace Demo.Generated;", source, StringComparison.Ordinal);
+        Assert.Contains("public enum CultureKey", source, StringComparison.Ordinal);
+        Assert.Contains("Greeting,", source, StringComparison.Ordinal);
         Assert.Contains("public static class Key", source, StringComparison.Ordinal);
         Assert.Contains(
             "public static string Greeting => \"Key.Greeting\";",
             source,
             StringComparison.Ordinal
         );
+    }
+
+    [Fact]
+    public void Referenced_wpf_adapter_generates_a_strongly_typed_localize_facade()
+    {
+        var result = RunGenerator(
+            documents:
+            [
+                Document(
+                    "C:\\project\\Culture.json",
+                    """
+                    {
+                      "Greeting": {
+                        "en-US": "Hello"
+                      }
+                    }
+                    """
+                ),
+            ],
+            frameworkSource:
+            """
+            namespace Arkheide.Essential.Culture.Wpf
+            {
+                public abstract class WpfLocalizeExtensionBase
+                {
+                    protected WpfLocalizeExtensionBase() { }
+                    protected WpfLocalizeExtensionBase(string token) { }
+                    protected string Token { get; set; } = "";
+                }
+            }
+            """
+        );
+
+        Assert.Empty(result.Diagnostics);
+        var facade = Assert.Single(
+            result.Results.Single().GeneratedSources,
+            generated => generated.HintName == "Localize.g.cs"
+        );
+        var source = facade.SourceText.ToString();
+        Assert.Contains(
+            "public sealed class Localize : global::Arkheide.Essential.Culture.Wpf.WpfLocalizeExtensionBase",
+            source,
+            StringComparison.Ordinal
+        );
+        Assert.Contains("public Localize()", source, StringComparison.Ordinal);
+        Assert.Contains(
+            "public Localize(global::Arkheide.Essential.Culture.CultureKey key)",
+            source,
+            StringComparison.Ordinal
+        );
+        Assert.Contains(
+            "public global::Arkheide.Essential.Culture.CultureKey Key",
+            source,
+            StringComparison.Ordinal
+        );
+        Assert.Contains(
+            "CultureKey.Greeting => global::Arkheide.Essential.Culture.Key.Greeting",
+            source,
+            StringComparison.Ordinal
+        );
+    }
+
+    [Fact]
+    public void Referenced_winui_adapter_generates_key_property_and_attached_arguments()
+    {
+        var result = RunGenerator(
+            documents:
+            [
+                Document(
+                    "C:\\project\\Culture.json",
+                    """
+                    {"Greeting":{"en-US":"Hello, {0}!"}}
+                    """
+                ),
+            ],
+            frameworkSource:
+            """
+            namespace Arkheide.Essential.Culture.WinUI
+            {
+                public class WinUILocalizeExtensionBase
+                {
+                    protected string Token { get; set; } = "";
+                }
+            }
+            """
+        );
+
+        Assert.Empty(result.Diagnostics);
+        var facade = Assert.Single(
+            result.Results.Single().GeneratedSources,
+            generated => generated.HintName == "Localize.g.cs"
+        );
+        var source = facade.SourceText.ToString();
+        Assert.Contains("public Localize()", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "public Localize(global::Arkheide.Essential.Culture.CultureKey key)",
+            source,
+            StringComparison.Ordinal
+        );
+        Assert.Contains(
+            "public global::Arkheide.Essential.Culture.CultureKey Key",
+            source,
+            StringComparison.Ordinal
+        );
+        Assert.Contains("Argument0Property", source, StringComparison.Ordinal);
+        Assert.Contains("SetArguments", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Explicit_xaml_framework_requires_the_matching_adapter_reference()
+    {
+        var result = RunGenerator(
+            xamlFramework: "wpf",
+            documents:
+            [
+                Document(
+                    "C:\\project\\Culture.json",
+                    """
+                    {"Greeting":{"en-US":"Hello"}}
+                    """
+                ),
+            ]
+        );
+
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal("AEC005", diagnostic.Id);
     }
 
     [Fact]
@@ -178,10 +306,14 @@ public sealed class CultureGeneratorTests
     private static GeneratorDriverRunResult RunGenerator(
         string? enabled = null,
         string? targetNamespace = null,
-        AdditionalText[]? documents = null
+        AdditionalText[]? documents = null,
+        string? xamlFramework = null,
+        string? frameworkSource = null
     )
     {
-        var syntaxTree = CSharpSyntaxTree.ParseText("internal sealed class Input;");
+        var syntaxTree = CSharpSyntaxTree.ParseText(
+            frameworkSource ?? "internal sealed class Input;"
+        );
         var compilation = CSharpCompilation.Create(
             "GeneratorTests",
             [syntaxTree],
@@ -197,6 +329,11 @@ public sealed class CultureGeneratorTests
         if (targetNamespace is not null)
         {
             options["build_property.ArkheideEssentialCultureNamespace"] = targetNamespace;
+        }
+
+        if (xamlFramework is not null)
+        {
+            options["build_property.ArkheideEssentialCultureXamlFramework"] = xamlFramework;
         }
 
         GeneratorDriver driver = CSharpGeneratorDriver.Create(

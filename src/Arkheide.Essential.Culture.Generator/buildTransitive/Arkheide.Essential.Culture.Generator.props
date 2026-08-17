@@ -4,11 +4,13 @@
     <ArkheideEssentialCultureGeneratorEnabled Condition="'$(ArkheideEssentialCultureGeneratorEnabled)' == ''">auto</ArkheideEssentialCultureGeneratorEnabled>
     <ArkheideEssentialCultureAutoInclude Condition="'$(ArkheideEssentialCultureAutoInclude)' == ''">true</ArkheideEssentialCultureAutoInclude>
     <ArkheideEssentialCultureAutoCreate Condition="'$(ArkheideEssentialCultureAutoCreate)' == ''">true</ArkheideEssentialCultureAutoCreate>
+    <ArkheideEssentialCultureXamlFramework Condition="'$(ArkheideEssentialCultureXamlFramework)' == ''">auto</ArkheideEssentialCultureXamlFramework>
   </PropertyGroup>
 
   <ItemGroup>
     <CompilerVisibleProperty Include="ArkheideEssentialCultureNamespace" />
     <CompilerVisibleProperty Include="ArkheideEssentialCultureGeneratorEnabled" />
+    <CompilerVisibleProperty Include="ArkheideEssentialCultureXamlFramework" />
     <!-- NuGet does not flow analyzer assets through package dependencies by default.
          Import the packaged generator through buildTransitive so Core and each
          framework package provide Arkheide.Essential.Culture.Key without an extra PackageReference. -->

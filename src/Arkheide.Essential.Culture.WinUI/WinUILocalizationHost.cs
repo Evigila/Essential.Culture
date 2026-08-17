@@ -7,10 +7,10 @@ using Microsoft.UI.Xaml.Media;
 namespace Arkheide.Essential.Culture.WinUI;
 
 /// <summary>
-/// Resolves Key tokens stored in common WinUI display dependency properties and refreshes
-/// attached windows when the active culture changes.
+/// Resolves values produced by the generated Localize markup extension in common WinUI display
+/// dependency properties and refreshes attached windows when the active culture changes.
 /// </summary>
-public sealed class WinUILocalizationApplicator : IWinUILocalizationApplicator
+public sealed class WinUILocalizationHost : IWinUILocalizationHost
 {
     private static readonly PropertyRule TextBlockText = new(
         "TextBlockText",
@@ -68,8 +68,8 @@ public sealed class WinUILocalizationApplicator : IWinUILocalizationApplicator
     private bool isChangedSubscribed;
     private bool isDisposed;
 
-    /// <summary>Creates a WinUI applicator backed by the active localization runtime.</summary>
-    public WinUILocalizationApplicator() { }
+    /// <summary>Creates a WinUI localization lifecycle host.</summary>
+    public WinUILocalizationHost() { }
 
     /// <inheritdoc />
     public void Attach(Window window)
@@ -438,7 +438,7 @@ public sealed class WinUILocalizationApplicator : IWinUILocalizationApplicator
 
         if (tracked is null)
         {
-            if (!TryResolveToken(value, out var resolved))
+            if (!TryResolveMarker(target, value, out var resolved))
             {
                 return;
             }
@@ -480,15 +480,90 @@ public sealed class WinUILocalizationApplicator : IWinUILocalizationApplicator
         }
     }
 
-    private static bool TryResolveToken(string value, out string resolved)
+    internal static void RefreshArguments(DependencyObject target)
     {
-        if (!value.StartsWith(KeyToken.Prefix, StringComparison.Ordinal))
+        if (target is TextBlock)
+        {
+            RefreshTrackedProperty(target, TextBlockText);
+        }
+
+        if (target is ContentControl)
+        {
+            RefreshTrackedProperty(target, ContentControlContent);
+        }
+
+        if (target is ContentDialog)
+        {
+            RefreshTrackedProperty(target, ContentDialogTitle);
+            RefreshTrackedProperty(target, ContentDialogPrimaryButtonText);
+            RefreshTrackedProperty(target, ContentDialogSecondaryButtonText);
+            RefreshTrackedProperty(target, ContentDialogCloseButtonText);
+        }
+
+        if (target is TextBox)
+        {
+            RefreshTrackedProperty(target, TextBoxPlaceholder);
+        }
+
+        if (target is PasswordBox)
+        {
+            RefreshTrackedProperty(target, PasswordBoxPlaceholder);
+        }
+
+        if (target is RichEditBox)
+        {
+            RefreshTrackedProperty(target, RichEditBoxPlaceholder);
+        }
+
+        if (target is AutoSuggestBox)
+        {
+            RefreshTrackedProperty(target, AutoSuggestBoxPlaceholder);
+        }
+
+        RefreshTrackedProperty(target, ToolTip);
+        RefreshTrackedProperty(target, AutomationName);
+    }
+
+    private static void RefreshTrackedProperty(DependencyObject target, PropertyRule rule)
+    {
+        if (target.ReadLocalValue(rule.TrackingProperty) is not TrackedProperty tracked)
+        {
+            return;
+        }
+
+        if (!tracked.Refresh(target, rule))
+        {
+            tracked.StopTracking(target, rule);
+        }
+    }
+
+    private static bool TryResolveMarker(
+        DependencyObject target,
+        string value,
+        out string resolved
+    )
+    {
+        if (!WinUILocalizationMarker.TryExtract(value, out var token))
         {
             resolved = value;
             return false;
         }
 
-        return Localizer.TryParse(value, out resolved);
+        var arguments = WinUILocalizeExtensionBase.GetCurrentArguments(target);
+        return arguments.Length == 0
+            ? Localizer.TryParse(token, out resolved)
+            : Localizer.TryParse(token, arguments, out resolved);
+    }
+
+    private static bool TryResolveMarker(string value, out string resolved)
+    {
+        if (!WinUILocalizationMarker.TryExtract(value, out var token))
+        {
+            resolved = value;
+            return false;
+        }
+
+        return Localizer.TryParse(token, out resolved);
     }
 
     private static void EnsureDispatcherAccess(DispatcherQueue dispatcherQueue, string operation)
@@ -502,7 +577,7 @@ public sealed class WinUILocalizationApplicator : IWinUILocalizationApplicator
     }
 
     private sealed class WindowRegistration(
-        WinUILocalizationApplicator owner,
+        WinUILocalizationHost owner,
         Window window
     )
     {
@@ -671,7 +746,7 @@ public sealed class WinUILocalizationApplicator : IWinUILocalizationApplicator
             var value = Window.Title;
             if (title is null)
             {
-                if (!allowDiscovery || !TryResolveToken(value, out var discovered))
+                if (!allowDiscovery || !TryResolveMarker(value, out var discovered))
                 {
                     return;
                 }
@@ -684,15 +759,15 @@ public sealed class WinUILocalizationApplicator : IWinUILocalizationApplicator
             string resolved;
             if (!string.Equals(value, title.LastResolved, StringComparison.Ordinal))
             {
-                if (!TryResolveToken(value, out resolved))
+                if (!TryResolveMarker(value, out resolved))
                 {
                     title = null;
                     return;
                 }
 
-                title.Key = value;
+                title.Marker = value;
             }
-            else if (!Localizer.TryParse(title.Key, out resolved))
+            else if (!TryResolveMarker(title.Marker, out resolved))
             {
                 title = null;
                 return;
@@ -720,13 +795,13 @@ public sealed class WinUILocalizationApplicator : IWinUILocalizationApplicator
         );
     }
 
-    private sealed class TrackedProperty(string key, string lastResolved)
+    private sealed class TrackedProperty(string marker, string lastResolved)
     {
         public WindowRegistration? StrongOwner { get; set; }
 
         public WindowRegistration? WeakOwner { get; set; }
 
-        private string Key { get; set; } = key;
+        private string Marker { get; set; } = marker;
 
         private string LastResolved { get; set; } = lastResolved;
 
@@ -741,14 +816,14 @@ public sealed class WinUILocalizationApplicator : IWinUILocalizationApplicator
             string resolved;
             if (!string.Equals(value, LastResolved, StringComparison.Ordinal))
             {
-                if (!TryResolveToken(value, out resolved))
+                if (!TryResolveMarker(target, value, out resolved))
                 {
                     return false;
                 }
 
-                Key = value;
+                Marker = value;
             }
-            else if (!Localizer.TryParse(Key, out resolved))
+            else if (!TryResolveMarker(target, Marker, out resolved))
             {
                 return false;
             }
@@ -780,9 +855,9 @@ public sealed class WinUILocalizationApplicator : IWinUILocalizationApplicator
         }
     }
 
-    private sealed class TrackedValue(string key, string lastResolved)
+    private sealed class TrackedValue(string marker, string lastResolved)
     {
-        public string Key { get; set; } = key;
+        public string Marker { get; set; } = marker;
 
         public string LastResolved { get; set; } = lastResolved;
     }
@@ -795,7 +870,7 @@ public sealed class WinUILocalizationApplicator : IWinUILocalizationApplicator
             DependencyProperty.RegisterAttached(
                 $"{name}Tracking",
                 typeof(object),
-                typeof(WinUILocalizationApplicator),
+                typeof(WinUILocalizationHost),
                 new PropertyMetadata(null)
             );
     }

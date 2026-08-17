@@ -4,8 +4,8 @@
     "zh-CN": "本地化演示"
   },
   "Greeting": {
-    "en-US": "Hello World",
-    "zh-CN": "你好世界"
+    "en-US": "Hello, {0}!",
+    "zh-CN": "你好，{0}！"
   },
   "Description": {
     "en-US": "Strongly typed keys and instant culture switching.",
@@ -28,8 +28,8 @@
     "zh-CN": "关闭"
   },
   "Console_Menu": {
-    "en-US": "Actions:\n1. Switch language\n2. Hello World\n3. Exit",
-    "zh-CN": "操作：\n1. 切换语言\n2. 你好世界\n3. 退出"
+    "en-US": "Actions:\n1. Switch language\n2. Say hello\n3. Exit",
+    "zh-CN": "操作：\n1. 切换语言\n2. 问候\n3. 退出"
   },
   "Console_Prompt": {
     "en-US": "Select: ",

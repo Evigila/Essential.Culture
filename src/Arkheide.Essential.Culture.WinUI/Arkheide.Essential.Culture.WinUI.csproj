@@ -8,7 +8,7 @@
     <UseWinUI>true</UseWinUI>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>Arkheide.Essential.Culture.WinUI</PackageId>
-    <Description>Automatic WinUI 3 visual-tree localization for Arkheide.Essential.Culture.</Description>
+    <Description>Strongly typed WinUI 3 XAML localization for Arkheide.Essential.Culture.</Description>
   </PropertyGroup>
 
   <ItemGroup>
