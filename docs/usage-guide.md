@@ -24,6 +24,19 @@ Generator 是编译期 Analyzer，不会成为应用的运行时程序集依赖�
 
 ## 2. 编写 Culture.json
 
+安装 Core、Generator 或任一框架包后，如果项目采用默认约定且未显式提供其他 `Culture.json` 生成输入，第一次构建会在应用项目根目录自动创建以下 `Culture.json`：
+
+```json
+{
+  "Greeting": {
+    "en-US": "Hello, World!",
+    "zh-CN": "你好，世界！"
+  }
+}
+```
+
+已有文件不会被创建逻辑覆盖。可以直接编辑该文件，将默认键替换或扩展为应用自己的资源。
+
 文档根节点是资源键对象；每个键映射到完整的“文化 → 文本”集合：
 
 ```json
@@ -63,12 +76,23 @@ Generator 是编译期 Analyzer，不会成为应用的运行时程序集依赖�
 
 ## 3. Generator 与资源文件约定
 
-Core 和三个框架包都会传递 Generator。把 `Culture.json` 放在应用项目根目录后，包内的 `buildTransitive` 配置会自动：
+Core 和三个框架包都会传递 Generator。包内的 `buildTransitive` 配置会自动：
 
+- 在采用默认约定、没有显式 `Culture.json` 生成输入且项目根目录缺少该文件时，于第一次构建创建默认文件。
 - 将文件作为 `AdditionalFiles` 交给 Generator。
 - 在构建后复制到 `$(TargetDir)\Culture.json`。
 - 在发布后复制到 `$(PublishDir)\Culture.json`。
 - 将 Generator 配置属性暴露给编译器。
+
+自动创建默认开启；若希望由开发者手动提供文件，可以单独关闭创建行为：
+
+```xml
+<PropertyGroup>
+  <ArkheideEssentialCultureAutoCreate>false</ArkheideEssentialCultureAutoCreate>
+</PropertyGroup>
+```
+
+关闭自动创建不会影响已有根目录文件的自动包含和复制。
 
 Generator 默认使用 `Arkheide.Essential.Culture` 命名空间和 `Key` 类型：
 
@@ -123,6 +147,8 @@ Generator 支持三种启用模式：
         CopyToPublishDirectory="PreserveNewest" />
 </ItemGroup>
 ```
+
+`ArkheideEssentialCultureAutoInclude=false` 会同时关闭默认文件创建、Generator 自动输入以及构建和发布复制；此时这些行为均由应用项目自行配置。
 
 仓库内 Demo 使用源码 `ProjectReference`，不会执行已打包 NuGet 的全部传递构建资产，因此 Demo 显式引用 Generator 并链接共享 JSON。真实应用安装 NuGet 包后只需遵循项目根目录约定。
 
@@ -332,6 +358,7 @@ Applicator 识别 Text、Content、ContentDialog 按钮文本、Placeholder、To
 
 发布前确认：
 
+- 第一次构建后，项目根目录中存在可编辑的 `Culture.json`，或者项目已显式关闭自动创建并提供自定义文件。
 - 输出目录和发布目录中存在 `Culture.json`。
 - Generator 只作为 Analyzer 参与编译，没有成为运行时程序集依赖。
 - JSON 中每个键具有相同文化集合和相同格式占位符编号。
@@ -345,7 +372,7 @@ Applicator 识别 Text、Content、ContentDialog 按钮文本、Placeholder、To
 
 ### Generator 报告找不到 Culture.json
 
-默认 `auto` 模式在没有文件时静默跳过；`true` 模式要求恰好存在一份文件。检查文件名、位置和 `AdditionalFiles`，并确保项目中只有一个名为 `Culture.json` 的生成输入。
+先确认项目至少完成过一次构建，并检查 `ArkheideEssentialCultureAutoCreate` 和 `ArkheideEssentialCultureAutoInclude` 是否被设为 `false`。默认 `auto` 模式在没有文件时静默跳过；`true` 模式要求恰好存在一份文件。使用自定义路径时，检查文件名和 `AdditionalFiles`，并确保项目中只有一个名为 `Culture.json` 的生成输入。
 
 ### 编译成功但启动时找不到文件
 

@@ -31,17 +31,17 @@
 ```
 ```
 
-在应用项目根目录创建 `Culture.json`（或者它将会被自动创建），并根据需要创建你自己的文化键：
+项目会自动创建 `Culture.json` 并包含默认内容，你可以创建自己的键和译文：
 
 ```json
 {
   "Greeting": {
-    "en-US": "Hello, {0}!",
-    "zh-CN": "你好，{0}！"
+    "en-US": "Hello, World!",
+    "zh-CN": "你好，世界！"
   },
   "Custom_Key": {
-    "en-US": "This is a custom key",
-    "zh-CN": "这是一个自定义键"
+    "en-US": "This is a custom message",
+    "zh-CN": "这是一句自定义译文"
   }
 }
 ```
@@ -77,7 +77,7 @@ WinUI 3 使用 `x:Bind`：
 
 ## 源生成
 
-Generator 会自动获取 `Culture.json`，并在构建和发布时复制到输出目录。以下是 Generator 的默认行为：
+Generator 会自动获取 `Culture.json`，并在构建和发布时复制到输出目录。默认文件会生成以下类型：
 
 ```csharp
 namespace Arkheide.Essential.Culture;
@@ -92,14 +92,14 @@ public static class Key
 using Arkheide.Essential.Culture;
 using GeneratedKey = global::Arkheide.Essential.Culture.Key;
 
-// 输出译文（带参数）
-Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting, "World"));
+// 输出译文
+Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting));
 
 // 切换文化
 Localizer.Current.SetCulture("zh-CN");
 
 // 再次输出译文，无需管理文化切换
-Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting, "World"));
+Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting));
 ```
 > [!NOTE]
 默认文化与 fallback 均为 `en-US`。
@@ -109,6 +109,14 @@ Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting, "World"));
 ```xml
 <PropertyGroup>
   <ArkheideEssentialCultureNamespace>MyApplication.Localization</ArkheideEssentialCultureNamespace>
+</PropertyGroup>
+```
+
+自动生成 `Culture.json` 时已有的文件不会被覆盖。创建后可以直接编辑该文件，添加自己的文化键和译文。如需禁止自动创建，可在项目文件中设置：
+
+```xml
+<PropertyGroup>
+  <ArkheideEssentialCultureAutoCreate>false</ArkheideEssentialCultureAutoCreate>
 </PropertyGroup>
 ```
 
