@@ -63,8 +63,8 @@ WPF 使用统一的 `Localize` API，参数可以直接使用 Binding：
 
 ```xml
 <Window xmlns:culture="clr-namespace:Arkheide.Essential.Culture">
-  <TextBlock Text="{culture:Localize Greeting}" />
-  <TextBlock Text="{culture:Localize Welcome_User, Arg0={Binding UserName}}" />
+  <TextBlock Text="{culture:Localize Key=Greeting}" />
+  <TextBlock Text="{culture:Localize Key=Welcome_User, Arg0={Binding UserName}}" />
 </Window>
 ```
 
@@ -72,12 +72,14 @@ Avalonia 使用相同 API，仅命名空间语法不同：
 
 ```xml
 <Window xmlns:culture="using:Arkheide.Essential.Culture">
-  <TextBlock Text="{culture:Localize Greeting}" />
-  <TextBlock Text="{culture:Localize Welcome_User, Arg0={Binding UserName}}" />
+  <TextBlock Text="{culture:Localize Key=Greeting}" />
+  <TextBlock Text="{culture:Localize Key=Welcome_User, Arg0={Binding UserName}}" />
 </Window>
 ```
 
-WinUI 3 的自定义 MarkupExtension 必须使用 `Key=`，动态参数通过同一 `Localize` 类型的附加属性提供：
+使用强类型 `Key=` 属性，让编辑器能够根据生成的 `CultureKey` 枚举提供键候选。
+
+WinUI 3 的动态参数通过同一 `Localize` 类型的附加属性提供：
 
 ```xml
 <Window xmlns:culture="using:Arkheide.Essential.Culture">

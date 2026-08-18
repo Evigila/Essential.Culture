@@ -18,10 +18,10 @@ Generator 默认在 `Arkheide.Essential.Culture` 中产生 `CultureKey`、`Key` 
 
 ```xml
 <Window xmlns:culture="clr-namespace:Arkheide.Essential.Culture"
-        Title="{culture:Localize App_Title}">
-  <TextBlock Text="{culture:Localize Greeting,
+        Title="{culture:Localize Key=App_Title}">
+  <TextBlock Text="{culture:Localize Key=Greeting,
                     Arg0={Binding ProductName}}" />
-  <Button Content="{culture:Localize Action_SwitchLanguage}" />
+  <Button Content="{culture:Localize Key=Action_SwitchLanguage}" />
 </Window>
 ```
 
@@ -32,9 +32,9 @@ Generator 默认在 `Arkheide.Essential.Culture` 中产生 `CultureKey`、`Key` 
 Demo 的 `Greeting` 和 `Current_Culture` 都包含 `{0}`，参数直接绑定到窗口属性：
 
 ```xml
-<TextBlock Text="{culture:Localize Greeting,
+<TextBlock Text="{culture:Localize Key=Greeting,
                   Arg0={Binding ProductName}}" />
-<TextBlock Text="{culture:Localize Current_Culture,
+<TextBlock Text="{culture:Localize Key=Current_Culture,
                   Arg0={Binding CurrentCulture}}" />
 ```
 

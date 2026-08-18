@@ -210,8 +210,8 @@ WPF：
 
 ```xml
 <Window xmlns:culture="clr-namespace:Arkheide.Essential.Culture">
-  <TextBlock Text="{culture:Localize App_Title}" />
-  <TextBlock Text="{culture:Localize Welcome_User, Arg0={Binding UserName}}" />
+  <TextBlock Text="{culture:Localize Key=App_Title}" />
+  <TextBlock Text="{culture:Localize Key=Welcome_User, Arg0={Binding UserName}}" />
 </Window>
 ```
 
@@ -219,8 +219,8 @@ Avalonia：
 
 ```xml
 <Window xmlns:culture="using:Arkheide.Essential.Culture">
-  <TextBlock Text="{culture:Localize App_Title}" />
-  <TextBlock Text="{culture:Localize Welcome_User, Arg0={Binding UserName}}" />
+  <TextBlock Text="{culture:Localize Key=App_Title}" />
+  <TextBlock Text="{culture:Localize Key=Welcome_User, Arg0={Binding UserName}}" />
 </Window>
 ```
 
@@ -249,7 +249,9 @@ WPF 与 Avalonia 可使用 `Arg0`、`Arg1`、`Arg2`。参数必须是 Binding；
 
 `Arguments` 不能与 `Arg0`–`Arg2` 混用。WPF/Avalonia 的 `Localize` 自身持有本地化 Binding，不需要额外初始化或视觉树扫描。
 
-WinUI 3 的 XAML 编译器要求自定义 MarkupExtension 使用公开默认构造器，因此必须写成 `Key=App_Title`，不能省略 `Key=`。`Argument0`–`Argument2` 是目标元素上的附加属性，同一元素上的已跟踪本地化属性共享这些参数。`Arguments` 可传入 `IList<object?>` 作为任意数量参数；设置后优先于三个独立参数。
+`Key` 是 Generator 生成的强类型 `CultureKey` 枚举属性，编辑器通常可以列出所有可用键，并由 XAML 编译器校验键名。
+
+`Arguments` 可传入 `IList<object?>` 作为任意数量参数；设置后优先于三个独立参数。
 
 > [!NOTE]
 > 如果 IntelliSense 尚未更新，请先构建一次项目。
@@ -305,7 +307,7 @@ public override void OnFrameworkInitializationCompleted()
 使用 `Localize` 后，ViewModel 只需要公开原始参数；文化变化与参数属性通知会由生成的本地化 Binding 组合处理：
 
 ```xml
-<TextBlock Text="{culture:Localize Current_Culture,
+<TextBlock Text="{culture:Localize Key=Current_Culture,
                   Arg0={Binding CurrentCulture}}" />
 ```
 

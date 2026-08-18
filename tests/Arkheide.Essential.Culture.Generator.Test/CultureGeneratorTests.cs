@@ -116,7 +116,7 @@ public sealed class CultureGeneratorTests
             StringComparison.Ordinal
         );
         Assert.Contains("public Localize()", source, StringComparison.Ordinal);
-        Assert.Contains(
+        Assert.DoesNotContain(
             "public Localize(global::Arkheide.Essential.Culture.CultureKey key)",
             source,
             StringComparison.Ordinal

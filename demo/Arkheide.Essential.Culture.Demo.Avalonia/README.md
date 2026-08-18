@@ -34,10 +34,10 @@ public override void OnFrameworkInitializationCompleted()
 
 ```xml
 <Window xmlns:culture="using:Arkheide.Essential.Culture"
-        Title="{culture:Localize App_Title}">
-  <TextBlock Text="{culture:Localize Greeting,
+        Title="{culture:Localize Key=App_Title}">
+  <TextBlock Text="{culture:Localize Key=Greeting,
                     Arg0={Binding ProductName}}" />
-  <Button Content="{culture:Localize Action_SwitchLanguage}" />
+  <Button Content="{culture:Localize Key=Action_SwitchLanguage}" />
 </Window>
 ```
 
@@ -58,9 +58,9 @@ public override void OnFrameworkInitializationCompleted()
 `Culture.json` 的 `Greeting` 与 `Current_Culture` 均包含 `{0}`。Demo 直接绑定 `ProductName` 和 `CurrentCulture`：
 
 ```xml
-<TextBlock Text="{culture:Localize Greeting,
+<TextBlock Text="{culture:Localize Key=Greeting,
                   Arg0={Binding ProductName}}" />
-<TextBlock Text="{culture:Localize Current_Culture,
+<TextBlock Text="{culture:Localize Key=Current_Culture,
                   Arg0={Binding CurrentCulture}}" />
 ```
 

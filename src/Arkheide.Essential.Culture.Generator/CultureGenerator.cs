@@ -347,15 +347,6 @@ public sealed class CultureGenerator : IIncrementalGenerator
         source.AppendLine("    public Localize()");
         source.AppendLine("    {");
         source.AppendLine("    }");
-        if (framework != XamlFramework.WinUI)
-        {
-            source.AppendLine();
-            source.AppendLine("    public Localize(global::" + targetNamespace + ".CultureKey key)");
-            source.AppendLine("        : base(GetToken(key))");
-            source.AppendLine("    {");
-            source.AppendLine("        this.key = key;");
-            source.AppendLine("    }");
-        }
 
         source.AppendLine();
         source.AppendLine("    public global::" + targetNamespace + ".CultureKey Key");

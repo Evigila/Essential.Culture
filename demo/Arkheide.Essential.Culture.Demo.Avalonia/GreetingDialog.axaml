@@ -5,7 +5,7 @@
   xmlns:local="using:Arkheide.Essential.Culture.Demo.Avalonia"
   x:Class="Arkheide.Essential.Culture.Demo.Avalonia.GreetingDialog"
   x:DataType="local:GreetingDialog"
-  Title="{culture:Localize App_Title}"
+  Title="{culture:Localize Key=App_Title}"
   Width="440"
   SizeToContent="Height"
   CanResize="False"
@@ -23,7 +23,7 @@
       </TextBlock.Text>
     </TextBlock>
     <Button
-      Content="{culture:Localize Action_Close}"
+      Content="{culture:Localize Key=Action_Close}"
       Click="Close_Click"
       MinWidth="120"
       Height="40"
