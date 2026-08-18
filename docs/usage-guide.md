@@ -102,8 +102,6 @@ public static class Key
 }
 ```
 
-UI 项目还会根据引用的框架包生成同一命名空间下的 `Localize` 门面。因此 XAML 只需声明一个 `culture` 命名空间，不需要同时引用核心包与适配器命名空间。
-
 如需覆盖默认命名空间：
 
 ```xml
@@ -112,7 +110,7 @@ UI 项目还会根据引用的框架包生成同一命名空间下的 `Localize`
 </PropertyGroup>
 ```
 
-Generator 默认自动识别项目引用的 XAML 适配器。单个项目同时引用多个适配器时，需要选择要生成的门面；不需要 XAML 门面时可设为 `none`：
+Generator 默认自动识别项目引用的 XAML 适配器。单个项目同时引用多个适配器时，需要选择要生成的入口；不需要 XAML 门面时可设为 `none`：
 
 ```xml
 <PropertyGroup>
@@ -123,10 +121,10 @@ Generator 默认自动识别项目引用的 XAML 适配器。单个项目同时�
 | 值 | 行为 |
 | --- | --- |
 | `auto` | 默认值；自动使用唯一的 WPF、Avalonia 或 WinUI 适配器 |
-| `wpf` | 生成 WPF `Localize` 门面 |
-| `avalonia` | 生成 Avalonia `Localize` 门面 |
-| `winui` | 生成 WinUI 3 `Localize` 门面 |
-| `none` | 仅生成 `CultureKey` 和 `Key`，不生成 XAML 门面 |
+| `wpf` | 生成 WPF `Localize` 入口 |
+| `avalonia` | 生成 Avalonia `Localize` 入口 |
+| `winui` | 生成 WinUI 3 `Localize` 入口 |
+| `none` | 仅生成 `CultureKey` 和 `Key`，不生成 XAML 入口 |
 
 Generator 支持三种启用模式：
 
@@ -206,7 +204,7 @@ if (Localizer.TryParse(GeneratedKey.Welcome_User, "User", out var welcome))
 
 ## XAML 中引用生成键
 
-推荐统一使用 Generator 生成的 `Localize`。键名由 `CultureKey` 强类型约束；无参文本和参数化文本使用同一个 API，参数 Binding 或当前文化变化时都会重新解析。
+推荐统一使用 Generator 生成的 `Localize` 入口。键名由 `CultureKey` 强类型约束；无参文本和参数化文本使用同一个 API，参数 Binding 或当前文化变化时都会重新解析。
 
 WPF：
 
@@ -254,7 +252,7 @@ WPF 与 Avalonia 可使用 `Arg0`、`Arg1`、`Arg2`。参数必须是 Binding；
 WinUI 3 的 XAML 编译器要求自定义 MarkupExtension 使用公开默认构造器，因此必须写成 `Key=App_Title`，不能省略 `Key=`。`Argument0`–`Argument2` 是目标元素上的附加属性，同一元素上的已跟踪本地化属性共享这些参数。`Arguments` 可传入 `IList<object?>` 作为任意数量参数；设置后优先于三个独立参数。
 
 > [!NOTE]
-> 如果 IntelliSense 尚未更新，请先构建一次项目。`Key.*` 是 C# 交给 `Localizer` 的稳定键；XAML 的唯一入口是 `culture:Localize`。
+> 如果 IntelliSense 尚未更新，请先构建一次项目。
 
 ## WPF
 
@@ -264,7 +262,7 @@ WinUI 3 的 XAML 编译器要求自定义 MarkupExtension 使用公开默认构�
 dotnet add package Arkheide.Essential.Culture.Wpf
 ```
 
-WPF 无需应用级初始化。正常创建窗口，并在需要时设置初始文化：
+正常创建窗口，并在需要时设置初始文化：
 
 ```csharp
 protected override void OnStartup(StartupEventArgs e)
@@ -289,7 +287,7 @@ protected override void OnStartup(StartupEventArgs e)
 dotnet add package Arkheide.Essential.Culture.Avalonia
 ```
 
-Avalonia 同样无需应用级本地化对象。在桌面生命周期中直接创建窗口：
+在桌面生命周期中直接创建窗口：
 
 ```csharp
 public override void OnFrameworkInitializationCompleted()
@@ -321,7 +319,7 @@ public override void OnFrameworkInitializationCompleted()
 dotnet add package Arkheide.Essential.Culture.WinUI
 ```
 
-WinUI 3 需要一个窗口刷新协调器，这是 `Localize` 的框架运行基础设施，不是第二套翻译入口。在窗口激活前调用 `Attach`：
+WinUI 3 需要一个窗口刷新协调器，这是 `Localize` 的框架运行基础设施。在窗口激活前调用 `Attach`：
 
 ```csharp
 private readonly WinUILocalizationHost localizationHost = new();
@@ -354,5 +352,3 @@ await dialog.ShowAsync();
 ```csharp
 localizationHost.Apply(dialogRoot);
 ```
-
-WinUI `Localize` 向目标属性提供内部标记，Host 再使用元素上的最新参数解析它。参数属性变化时只刷新当前元素已登记的属性；文化变化通过窗口的 `DispatcherQueue` 刷新。Host 只处理 `Localize` 产生的内部标记，原始 `Key.*` 字符串只用于 C# 的 `Localizer` 调用。

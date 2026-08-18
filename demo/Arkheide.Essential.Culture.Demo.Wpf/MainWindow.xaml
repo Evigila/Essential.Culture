@@ -3,7 +3,7 @@
   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:culture="clr-namespace:Arkheide.Essential.Culture"
-  Title="{culture:Localize App_Title}"
+  Title="{culture:Localize Key=App_Title}"
   Width="1280"
   Height="720"
   WindowStartupLocation="CenterScreen"

@@ -7,7 +7,7 @@
 ## 功能
 
 - `Culture.json` 是约定俗成的 JSON 名称，将自动被识别。
-- 源生成 `Key`、`CultureKey` 和统一的 `Localize` XAML API，提供强类型键与编译期检查。
+- 源生成 `CultureKey` 和统一的 `Localize` XAML API，提供强类型键与编译期检查。
 - 通过 `Localizer.Parse(...)` 和 `Localizer.TryParse(...)` 解析文化键，支持参数化。
 - 通过 `Localizer.Current` 动态操作文化。
 
@@ -87,11 +87,9 @@ WinUI 3 的自定义 MarkupExtension 必须使用 `Key=`，动态参数通过同
 </Window>
 ```
 
-接口约定保持单一：C# 将 `Key.*` 交给 `Localizer`，XAML 只使用 `culture:Localize`。
-
 ## 源生成
 
-Generator 会自动获取 `Culture.json`，并在构建和发布时复制到输出目录。默认文件会生成 `CultureKey` 枚举、`Key` token，以及 UI 项目使用的 `Localize` 门面：
+Generator 会自动获取 `Culture.json`，并在构建和发布时复制到输出目录。默认文件会生成 `CultureKey` 枚举、`Key` token，以及 UI 项目使用的 `Localize` 静态入口：
 
 ```csharp
 namespace Arkheide.Essential.Culture;

@@ -1,59 +1,75 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:culture="using:Arkheide.Essential.Culture"
-        xmlns:local="using:Arkheide.Essential.Culture.Demo.Avalonia"
-        x:Class="Arkheide.Essential.Culture.Demo.Avalonia.MainWindow"
-        x:DataType="local:MainWindow"
-        Title="{culture:Localize App_Title}"
-        Width="1280"
-        Height="720"
-        WindowStartupLocation="CenterScreen"
-        Background="#F3F4F6"
-        FontFamily="Segoe UI">
+<Window
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:culture="using:Arkheide.Essential.Culture"
+  xmlns:local="using:Arkheide.Essential.Culture.Demo.Avalonia"
+  x:Class="Arkheide.Essential.Culture.Demo.Avalonia.MainWindow"
+  x:DataType="local:MainWindow"
+  Title="{culture:Localize App_Title}"
+  Width="1280"
+  Height="720"
+  WindowStartupLocation="CenterScreen"
+  Background="#F3F4F6"
+  FontFamily="Segoe UI"
+>
   <Grid>
-    <Border Width="800"
-            Padding="56"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            Background="White"
-            BorderBrush="#E5E7EB"
-            BorderThickness="1"
-            CornerRadius="18">
+    <Border
+      Width="800"
+      Padding="56"
+      HorizontalAlignment="Center"
+      VerticalAlignment="Center"
+      Background="White"
+      BorderBrush="#E5E7EB"
+      BorderThickness="1"
+      CornerRadius="18"
+    >
       <StackPanel>
-        <TextBlock Text="{culture:Localize App_Title}"
-                   FontSize="34"
-                   FontWeight="SemiBold"
-                   Foreground="#111827" />
-        <TextBlock Text="{culture:Localize Greeting, Arg0={Binding ProductName}}"
-                   Margin="0,24,0,0"
-                   FontSize="24"
-                   FontWeight="SemiBold"
-                   Foreground="#1F2937" />
-        <TextBlock Text="{culture:Localize Description}"
-                   Margin="0,12,0,0"
-                   FontSize="16"
-                   LineHeight="26"
-                   Foreground="#4B5563"
-                   TextWrapping="Wrap" />
-        <TextBlock Text="{culture:Localize Current_Culture, Arg0={Binding CurrentCulture}}"
-                   Margin="0,20,0,0"
-                   FontSize="14"
-                   Foreground="#6B7280" />
+        <TextBlock
+          Text="{culture:Localize App_Title}"
+          FontSize="34"
+          FontWeight="SemiBold"
+          Foreground="#111827"
+        />
+        <TextBlock
+          Text="{culture:Localize Greeting, Arg0={Binding ProductName}}"
+          Margin="0,24,0,0"
+          FontSize="24"
+          FontWeight="SemiBold"
+          Foreground="#1F2937"
+        />
+        <TextBlock
+          Text="{culture:Localize Description}"
+          Margin="0,12,0,0"
+          FontSize="16"
+          LineHeight="26"
+          Foreground="#4B5563"
+          TextWrapping="Wrap"
+        />
+        <TextBlock
+          Text="{culture:Localize Current_Culture, Arg0={Binding CurrentCulture}}"
+          Margin="0,20,0,0"
+          FontSize="14"
+          Foreground="#6B7280"
+        />
         <StackPanel Margin="0,32,0,0" Orientation="Horizontal" Spacing="12">
-          <Button Content="{culture:Localize Action_SwitchLanguage}"
-                  Click="SwitchLanguage_Click"
-                  MinWidth="180"
-                  Height="44"
-                  Padding="20,0"
-                  FontSize="14"
-                  FontWeight="SemiBold" />
-          <Button Content="{culture:Localize Action_ShowGreeting}"
-                  Click="ShowGreeting_Click"
-                  MinWidth="180"
-                  Height="44"
-                  Padding="20,0"
-                  FontSize="14"
-                  FontWeight="SemiBold" />
+          <Button
+            Content="{culture:Localize Action_SwitchLanguage}"
+            Click="SwitchLanguage_Click"
+            MinWidth="180"
+            Height="44"
+            Padding="20,0"
+            FontSize="14"
+            FontWeight="SemiBold"
+          />
+          <Button
+            Content="{culture:Localize Action_ShowGreeting}"
+            Click="ShowGreeting_Click"
+            MinWidth="180"
+            Height="44"
+            Padding="20,0"
+            FontSize="14"
+            FontWeight="SemiBold"
+          />
         </StackPanel>
       </StackPanel>
     </Border>
