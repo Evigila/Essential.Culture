@@ -2,6 +2,16 @@
 
 这个示例展示如何通过 `Localizer` 静态门面使用生成键、解析带参文本。
 
+## 依赖
+
+安装：
+
+```xml
+<PackageReference Include="Arkheide.Essential.Culture" Version="1.0.0" />
+```
+
+Core 包会自动传递 Generator；Demo 不需要单独引用 Generator。
+
 ## 核心调用
 
 第一次调用时，`Localizer` 会从输出目录懒加载资源文件：

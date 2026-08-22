@@ -1,11 +1,4 @@
 <Solution>
-  <Folder Name="/Dependencies/">
-    <Project Path="../src/Arkheide.Essential.Culture/Arkheide.Essential.Culture.csproj" />
-    <Project Path="../src/Arkheide.Essential.Culture.Generator/Arkheide.Essential.Culture.Generator.csproj" />
-    <Project Path="../src/Arkheide.Essential.Culture.Avalonia/Arkheide.Essential.Culture.Avalonia.csproj" />
-    <Project Path="../src/Arkheide.Essential.Culture.Wpf/Arkheide.Essential.Culture.Wpf.csproj" />
-    <Project Path="../src/Arkheide.Essential.Culture.WinUI/Arkheide.Essential.Culture.WinUI.csproj" />
-  </Folder>
   <Project Path="Arkheide.Essential.Culture.Demo.Console/Arkheide.Essential.Culture.Demo.Console.csproj" />
   <Project Path="Arkheide.Essential.Culture.Demo.Wpf/Arkheide.Essential.Culture.Demo.Wpf.csproj" />
   <Project Path="Arkheide.Essential.Culture.Demo.Avalonia/Arkheide.Essential.Culture.Demo.Avalonia.csproj" />

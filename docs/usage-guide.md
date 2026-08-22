@@ -2,7 +2,7 @@
 
 ## 包
 
-使用框架包可自动传递核心以及源生成器项目。
+使用框架包可自动传递核心包以及源生成器。
 
 | 场景 | 安装包 |
 | --- | --- |
@@ -110,7 +110,7 @@ public static class Key
 </PropertyGroup>
 ```
 
-Generator 默认自动识别项目引用的 XAML 适配器。单个项目同时引用多个适配器时，需要选择要生成的入口；不需要 XAML 门面时可设为 `none`：
+Generator 默认自动识别项目所引用的 XAML 适配器。单个项目同时引用多个适配器时，需要选择要生成的入口；不需要 XAML 门面时可设为 `none`：
 
 ```xml
 <PropertyGroup>

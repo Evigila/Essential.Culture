@@ -13,9 +13,6 @@
     <PackageReference Include="Avalonia" Version="12.1.0" />
     <PackageReference Include="Avalonia.Desktop" Version="12.1.0" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
-    <ProjectReference Include="..\..\src\Arkheide.Essential.Culture.Avalonia\Arkheide.Essential.Culture.Avalonia.csproj" />
-    <ProjectReference Include="..\..\src\Arkheide.Essential.Culture.Generator\Arkheide.Essential.Culture.Generator.csproj"
-                      OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false" />
+    <PackageReference Include="Arkheide.Essential.Culture.Avalonia" Version="1.0.0" />
   </ItemGroup>
 </Project>

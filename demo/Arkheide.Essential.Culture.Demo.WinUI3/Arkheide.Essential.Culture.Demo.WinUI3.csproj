@@ -19,11 +19,6 @@
     <AdditionalFiles Include="..\Culture.json" Link="Culture.json" />
     <None Include="..\Culture.json" Link="Culture.json" CopyToOutputDirectory="PreserveNewest" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.3.1" />
-    <ProjectReference Include="..\..\src\Arkheide.Essential.Culture.WinUI\Arkheide.Essential.Culture.WinUI.csproj" />
-    <ProjectReference
-      Include="..\..\src\Arkheide.Essential.Culture.Generator\Arkheide.Essential.Culture.Generator.csproj"
-      OutputItemType="Analyzer"
-      ReferenceOutputAssembly="false"
-    />
+    <PackageReference Include="Arkheide.Essential.Culture.WinUI" Version="1.0.0" />
   </ItemGroup>
 </Project>

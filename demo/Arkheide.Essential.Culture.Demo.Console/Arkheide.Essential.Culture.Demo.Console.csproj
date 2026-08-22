@@ -10,9 +10,6 @@
   <ItemGroup>
     <AdditionalFiles Include="..\Culture.json" Link="Culture.json" />
     <None Include="..\Culture.json" Link="Culture.json" CopyToOutputDirectory="PreserveNewest" />
-    <ProjectReference Include="..\..\src\Arkheide.Essential.Culture\Arkheide.Essential.Culture.csproj" />
-    <ProjectReference Include="..\..\src\Arkheide.Essential.Culture.Generator\Arkheide.Essential.Culture.Generator.csproj"
-                      OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false" />
+    <PackageReference Include="Arkheide.Essential.Culture" Version="1.0.0" />
   </ItemGroup>
 </Project>
