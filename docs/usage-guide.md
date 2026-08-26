@@ -78,16 +78,16 @@
 
 ```xml
 <PropertyGroup>
-  <ArkheideEssentialCultureAutoCreate>false</ArkheideEssentialCultureAutoCreate>
+  <EssentialCultureAutoCreate>false</EssentialCultureAutoCreate>
 </PropertyGroup>
 ```
 
 关闭自动创建不会影响已有根目录文件的自动包含和复制。
 
-Generator 默认使用 `Arkheide.Essential.Culture` 命名空间，并生成供 XAML 使用的 `CultureKey` 与供 C# 使用的 `Key`：
+Generator 默认使用 `ArkheideSystem.Essential.Culture` 命名空间，并生成供 XAML 使用的 `CultureKey` 与供 C# 使用的 `Key`：
 
 ```csharp
-namespace Arkheide.Essential.Culture;
+namespace ArkheideSystem.Essential.Culture;
 
 public enum CultureKey
 {
@@ -106,7 +106,7 @@ public static class Key
 
 ```xml
 <PropertyGroup>
-  <ArkheideEssentialCultureNamespace>MyApplication.Localization</ArkheideEssentialCultureNamespace>
+  <EssentialCultureNamespace>MyApplication.Localization</EssentialCultureNamespace>
 </PropertyGroup>
 ```
 
@@ -114,7 +114,7 @@ Generator 默认自动识别项目所引用的 XAML 适配器。单个项目同�
 
 ```xml
 <PropertyGroup>
-  <ArkheideEssentialCultureXamlFramework>wpf</ArkheideEssentialCultureXamlFramework>
+  <EssentialCultureXamlFramework>wpf</EssentialCultureXamlFramework>
 </PropertyGroup>
 ```
 
@@ -130,7 +130,7 @@ Generator 支持三种启用模式：
 
 ```xml
 <PropertyGroup>
-  <ArkheideEssentialCultureGeneratorEnabled>auto</ArkheideEssentialCultureGeneratorEnabled>
+  <EssentialCultureGeneratorEnabled>auto</EssentialCultureGeneratorEnabled>
 </PropertyGroup>
 ```
 
@@ -144,7 +144,7 @@ Generator 支持三种启用模式：
 
 ```xml
 <PropertyGroup>
-  <ArkheideEssentialCultureAutoInclude>false</ArkheideEssentialCultureAutoInclude>
+  <EssentialCultureAutoInclude>false</EssentialCultureAutoInclude>
 </PropertyGroup>
 
 <ItemGroup>
@@ -156,15 +156,15 @@ Generator 支持三种启用模式：
 </ItemGroup>
 ```
 
-`ArkheideEssentialCultureAutoInclude=false` 会同时关闭默认文件创建、Generator 自动输入以及构建和发布复制；此时这些行为均由应用项目自行配置。
+`EssentialCultureAutoInclude=false` 会同时关闭默认文件创建、Generator 自动输入以及构建和发布复制；此时这些行为均由应用项目自行配置。
 
 ## C# 解析文本
 
 第一次访问 `Localizer` 时，它会从 `AppContext.BaseDirectory` 懒加载 `Culture.json`。
 
 ```csharp
-using Arkheide.Essential.Culture;
-using GeneratedKey = global::Arkheide.Essential.Culture.Key;
+using ArkheideSystem.Essential.Culture;
+using GeneratedKey = global::ArkheideSystem.Essential.Culture.Key;
 
 var title = Localizer.Parse(GeneratedKey.App_Title);
 var welcome = Localizer.Parse(GeneratedKey.Welcome_User, "User");
@@ -209,7 +209,7 @@ if (Localizer.TryParse(GeneratedKey.Welcome_User, "User", out var welcome))
 WPF：
 
 ```xml
-<Window xmlns:culture="clr-namespace:Arkheide.Essential.Culture">
+<Window xmlns:culture="clr-namespace:ArkheideSystem.Essential.Culture">
   <TextBlock Text="{culture:Localize Key=App_Title}" />
   <TextBlock Text="{culture:Localize Key=Welcome_User, Arg0={Binding UserName}}" />
 </Window>
@@ -218,7 +218,7 @@ WPF：
 Avalonia：
 
 ```xml
-<Window xmlns:culture="using:Arkheide.Essential.Culture">
+<Window xmlns:culture="using:ArkheideSystem.Essential.Culture">
   <TextBlock Text="{culture:Localize Key=App_Title}" />
   <TextBlock Text="{culture:Localize Key=Welcome_User, Arg0={Binding UserName}}" />
 </Window>
@@ -227,7 +227,7 @@ Avalonia：
 WinUI 3：
 
 ```xml
-<Window xmlns:culture="using:Arkheide.Essential.Culture">
+<Window xmlns:culture="using:ArkheideSystem.Essential.Culture">
   <TextBlock Text="{culture:Localize Key=App_Title}" />
   <TextBlock Text="{culture:Localize Key=Welcome_User}"
              culture:Localize.Argument0="{x:Bind ViewModel.UserName, Mode=OneWay}" />

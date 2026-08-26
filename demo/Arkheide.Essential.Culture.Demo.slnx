@@ -1,6 +1,0 @@
-<Solution>
-  <Project Path="Arkheide.Essential.Culture.Demo.Console/Arkheide.Essential.Culture.Demo.Console.csproj" />
-  <Project Path="Arkheide.Essential.Culture.Demo.Wpf/Arkheide.Essential.Culture.Demo.Wpf.csproj" />
-  <Project Path="Arkheide.Essential.Culture.Demo.Avalonia/Arkheide.Essential.Culture.Demo.Avalonia.csproj" />
-  <Project Path="Arkheide.Essential.Culture.Demo.WinUI3/Arkheide.Essential.Culture.Demo.WinUI3.csproj" />
-</Solution>

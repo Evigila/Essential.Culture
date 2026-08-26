@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ArkheideSystem.Essential.Culture.Avalonia</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageId>Arkheide.Essential.Culture.Avalonia</PackageId>
+    <Description>Strongly typed Avalonia XAML localization bindings for Essential.Culture.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.0" />
+    <ProjectReference Include="..\Essential.Culture\Essential.Culture.csproj" PrivateAssets="none" />
+  </ItemGroup>
+</Project>

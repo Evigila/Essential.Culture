@@ -1,6 +1,6 @@
-# Arkheide.Essential.Culture
+# Essential.Culture
 
-`Arkheide.Essential.Culture` 是一个面向 .NET 的 JSON 文化管理组件。
+`Essential.Culture` 是一个面向 .NET 的 JSON 文化管理组件。
 
 它使用单一 `Culture.json` 管理文化键，通过 Source Generator 生成强类型键（源神启动！），并为 WPF、Avalonia 和 WinUI 3 提供运行时文化切换。
 
@@ -59,10 +59,10 @@ dotnet add package Arkheide.Essential.Culture
 > [!NOTE]
 > 如果 IntelliSense 尚未显示生成类型，请先构建一次项目。
 
-WPF 使用统一的 `Localize` API，参数可以直接使用 Binding：
+WPF 使用 `Localize` ，参数可以直接使用 Binding：
 
 ```xml
-<Window xmlns:culture="clr-namespace:Arkheide.Essential.Culture">
+<Window xmlns:culture="clr-namespace:ArkheideSystem.Essential.Culture">
   <TextBlock Text="{culture:Localize Key=Greeting}" />
   <TextBlock Text="{culture:Localize Key=Welcome_User, Arg0={Binding UserName}}" />
 </Window>
@@ -71,7 +71,7 @@ WPF 使用统一的 `Localize` API，参数可以直接使用 Binding：
 Avalonia 使用相同 API，仅命名空间语法不同：
 
 ```xml
-<Window xmlns:culture="using:Arkheide.Essential.Culture">
+<Window xmlns:culture="using:ArkheideSystem.Essential.Culture">
   <TextBlock Text="{culture:Localize Key=Greeting}" />
   <TextBlock Text="{culture:Localize Key=Welcome_User, Arg0={Binding UserName}}" />
 </Window>
@@ -82,7 +82,7 @@ Avalonia 使用相同 API，仅命名空间语法不同：
 WinUI 3 的动态参数通过同一 `Localize` 类型的附加属性提供：
 
 ```xml
-<Window xmlns:culture="using:Arkheide.Essential.Culture">
+<Window xmlns:culture="using:ArkheideSystem.Essential.Culture">
   <TextBlock Text="{culture:Localize Key=Greeting}" />
   <TextBlock Text="{culture:Localize Key=Welcome_User}"
              culture:Localize.Argument0="{x:Bind ViewModel.UserName, Mode=OneWay}" />
@@ -94,7 +94,7 @@ WinUI 3 的动态参数通过同一 `Localize` 类型的附加属性提供：
 Generator 会自动获取 `Culture.json`，并在构建和发布时复制到输出目录。默认文件会生成 `CultureKey` 枚举、`Key` token，以及 UI 项目使用的 `Localize` 静态入口：
 
 ```csharp
-namespace Arkheide.Essential.Culture;
+namespace ArkheideSystem.Essential.Culture;
 
 public enum CultureKey
 {
@@ -108,8 +108,8 @@ public static class Key
 ```
 
 ```csharp
-using Arkheide.Essential.Culture;
-using GeneratedKey = global::Arkheide.Essential.Culture.Key;
+using ArkheideSystem.Essential.Culture;
+using GeneratedKey = global::ArkheideSystem.Essential.Culture.Key;
 
 // 输出译文
 Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting));
@@ -128,7 +128,7 @@ Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting));
 
 ```xml
 <PropertyGroup>
-  <ArkheideEssentialCultureNamespace>MyApplication.Localization</ArkheideEssentialCultureNamespace>
+  <EssentialCultureNamespace>MyApplication.Localization</EssentialCultureNamespace>
 </PropertyGroup>
 ```
 
@@ -136,7 +136,7 @@ Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting));
 
 ```xml
 <PropertyGroup>
-  <ArkheideEssentialCultureAutoCreate>false</ArkheideEssentialCultureAutoCreate>
+  <EssentialCultureAutoCreate>false</EssentialCultureAutoCreate>
 </PropertyGroup>
 ```
 
@@ -167,10 +167,10 @@ dotnet add package Arkheide.Essential.Culture.WinUI
 
 - [完整使用指南](docs/usage-guide.md)
 - [Demo 总览](demo/README.md)
-- [Console Demo](demo/Arkheide.Essential.Culture.Demo.Console/README.md)
-- [WPF Demo](demo/Arkheide.Essential.Culture.Demo.Wpf/README.md)
-- [Avalonia Demo](demo/Arkheide.Essential.Culture.Demo.Avalonia/README.md)
-- [WinUI 3 Demo](demo/Arkheide.Essential.Culture.Demo.WinUI3/README.md)
+- [Console Demo](demo/Essential.Culture.Demo.Console/README.md)
+- [WPF Demo](demo/Essential.Culture.Demo.Wpf/README.md)
+- [Avalonia Demo](demo/Essential.Culture.Demo.Avalonia/README.md)
+- [WinUI 3 Demo](demo/Essential.Culture.Demo.WinUI3/README.md)
 - [测试项目说明](tests/README.md)
 
 ## 许可证

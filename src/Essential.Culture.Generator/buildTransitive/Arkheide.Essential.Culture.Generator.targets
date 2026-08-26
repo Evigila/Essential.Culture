@@ -1,0 +1,45 @@
+<Project>
+  <Target
+    Name="EssentialCulturePrepareDefaultDocument"
+    BeforeTargets="PrepareForBuild;GenerateMSBuildEditorConfigFile"
+    Condition="'$(EssentialCultureAutoInclude)' != 'false'">
+    <PropertyGroup>
+      <_EssentialCultureDefaultDocument>$(MSBuildProjectDirectory)\Culture.json</_EssentialCultureDefaultDocument>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_EssentialCultureExplicitDocument
+        Include="@(AdditionalFiles)"
+        Condition="'%(AdditionalFiles.Filename)%(AdditionalFiles.Extension)' == 'Culture.json'" />
+      <_EssentialCultureExplicitRootDocument
+        Include="@(_EssentialCultureExplicitDocument)"
+        Condition="'%(_EssentialCultureExplicitDocument.FullPath)' == '$(_EssentialCultureDefaultDocument)'" />
+      <_EssentialCultureExistingContent
+        Include="@(Content)"
+        Condition="'%(Content.FullPath)' == '$(_EssentialCultureDefaultDocument)'" />
+    </ItemGroup>
+
+    <Copy
+      SourceFiles="$(MSBuildThisFileDirectory)Culture.template.json"
+      DestinationFiles="$(_EssentialCultureDefaultDocument)"
+      Condition="'$(EssentialCultureAutoCreate)' != 'false' and '@(_EssentialCultureExplicitDocument)' == '' and !Exists('$(_EssentialCultureDefaultDocument)')" />
+
+    <ItemGroup Condition="Exists('$(_EssentialCultureDefaultDocument)') and ('@(_EssentialCultureExplicitDocument)' == '' or '@(_EssentialCultureExplicitRootDocument)' != '')">
+      <AdditionalFiles
+        Include="$(_EssentialCultureDefaultDocument)"
+        Condition="'@(_EssentialCultureExplicitDocument)' == ''" />
+      <Content
+        Update="@(Content)"
+        CopyToOutputDirectory="PreserveNewest"
+        CopyToPublishDirectory="PreserveNewest"
+        Condition="'%(Content.FullPath)' == '$(_EssentialCultureDefaultDocument)'" />
+      <Content
+        Include="$(_EssentialCultureDefaultDocument)"
+        Link="Culture.json"
+        CopyToOutputDirectory="PreserveNewest"
+        CopyToPublishDirectory="PreserveNewest"
+        Condition="'@(_EssentialCultureExistingContent)' == ''" />
+    </ItemGroup>
+  </Target>
+
+</Project>

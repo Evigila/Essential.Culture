@@ -67,14 +67,14 @@ jobs:
           }
 
       - name: Restore product and tests
-        run: dotnet restore ./Arkheide.Essential.Culture.slnx
+        run: dotnet restore ./Essential.Culture.slnx
 
       - name: Restore demos
-        run: dotnet restore ./demo/Arkheide.Essential.Culture.Demo.slnx
+        run: dotnet restore ./demo/Essential.Culture.Demo.slnx -p:UseLocalCulture=true
 
       - name: Build product and tests
         run: >-
-          dotnet build ./Arkheide.Essential.Culture.slnx
+          dotnet build ./Essential.Culture.slnx
           --configuration Release
           --no-restore
           --no-incremental
@@ -83,23 +83,24 @@ jobs:
 
       - name: Run tests
         run: >-
-          dotnet test ./Arkheide.Essential.Culture.slnx
+          dotnet test ./Essential.Culture.slnx
           --configuration Release
           --no-build
           --no-restore
 
       - name: Build demos
         run: >-
-          dotnet build ./demo/Arkheide.Essential.Culture.Demo.slnx
+          dotnet build ./demo/Essential.Culture.Demo.slnx
           --configuration Release
           --no-restore
           --no-incremental
           -p:TreatWarningsAsErrors=true
           -p:ContinuousIntegrationBuild=true
+          -p:UseLocalCulture=true
 
       - name: Pack NuGet packages
         run: >-
-          dotnet pack ./Arkheide.Essential.Culture.slnx
+          dotnet pack ./Essential.Culture.slnx
           --configuration Release
           --no-build
           --no-restore

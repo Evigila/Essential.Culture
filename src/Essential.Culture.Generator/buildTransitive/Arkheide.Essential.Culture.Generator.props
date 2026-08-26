@@ -1,0 +1,23 @@
+<Project>
+  <PropertyGroup>
+    <!-- Legacy 1.0 properties remain accepted as fallbacks for existing project files. -->
+    <EssentialCultureNamespace Condition="'$(EssentialCultureNamespace)' == '' and '$(ArkheideEssentialCultureNamespace)' != ''">$(ArkheideEssentialCultureNamespace)</EssentialCultureNamespace>
+    <EssentialCultureGeneratorEnabled Condition="'$(EssentialCultureGeneratorEnabled)' == '' and '$(ArkheideEssentialCultureGeneratorEnabled)' != ''">$(ArkheideEssentialCultureGeneratorEnabled)</EssentialCultureGeneratorEnabled>
+    <EssentialCultureAutoInclude Condition="'$(EssentialCultureAutoInclude)' == '' and '$(ArkheideEssentialCultureAutoInclude)' != ''">$(ArkheideEssentialCultureAutoInclude)</EssentialCultureAutoInclude>
+    <EssentialCultureAutoCreate Condition="'$(EssentialCultureAutoCreate)' == '' and '$(ArkheideEssentialCultureAutoCreate)' != ''">$(ArkheideEssentialCultureAutoCreate)</EssentialCultureAutoCreate>
+    <EssentialCultureXamlFramework Condition="'$(EssentialCultureXamlFramework)' == '' and '$(ArkheideEssentialCultureXamlFramework)' != ''">$(ArkheideEssentialCultureXamlFramework)</EssentialCultureXamlFramework>
+
+    <EssentialCultureNamespace Condition="'$(EssentialCultureNamespace)' == ''">ArkheideSystem.Essential.Culture</EssentialCultureNamespace>
+    <EssentialCultureGeneratorEnabled Condition="'$(EssentialCultureGeneratorEnabled)' == ''">auto</EssentialCultureGeneratorEnabled>
+    <EssentialCultureAutoInclude Condition="'$(EssentialCultureAutoInclude)' == ''">true</EssentialCultureAutoInclude>
+    <EssentialCultureAutoCreate Condition="'$(EssentialCultureAutoCreate)' == ''">true</EssentialCultureAutoCreate>
+    <EssentialCultureXamlFramework Condition="'$(EssentialCultureXamlFramework)' == ''">auto</EssentialCultureXamlFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="EssentialCultureNamespace" />
+    <CompilerVisibleProperty Include="EssentialCultureGeneratorEnabled" />
+    <CompilerVisibleProperty Include="EssentialCultureXamlFramework" />
+    <Analyzer Include="$(MSBuildThisFileDirectory)..\analyzers\dotnet\cs\Essential.Culture.Generator.dll" />
+  </ItemGroup>
+</Project>

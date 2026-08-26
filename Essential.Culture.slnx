@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="src/Essential.Culture/Essential.Culture.csproj" />
+  <Project Path="src/Essential.Culture.Avalonia/Essential.Culture.Avalonia.csproj" />
+  <Project Path="src/Essential.Culture.Wpf/Essential.Culture.Wpf.csproj" />
+  <Project Path="src/Essential.Culture.WinUI/Essential.Culture.WinUI.csproj" />
+  <Project Path="src/Essential.Culture.Generator/Essential.Culture.Generator.csproj" />
+  <Project Path="tests/Essential.Culture.Generator.Test/Essential.Culture.Generator.Test.csproj" />
+  <Project Path="tests/Essential.Culture.Test/Essential.Culture.Test.csproj" />
+</Solution>
