@@ -61,6 +61,60 @@ public sealed class AvaloniaLocalizeExtensionTests
     }
 
     [Fact]
+    public void KeyBinding_RefreshesWhenKeyOrCultureChanges()
+    {
+        Localizer.Current.SetCulture("en-US");
+        var source = new BindingSource { Value = "Key.Title_Hello" };
+        var extension = new DeferredTestLocalizeExtension
+        {
+            KeyBinding = new Binding(nameof(BindingSource.Value)) { Source = source },
+        };
+        var text = new TextBlock();
+
+        text.Bind(TextBlock.TextProperty, extension.CreateBinding());
+        Assert.Equal("Hello World!", text.Text);
+
+        source.Value = "Key.Message_Count";
+        Assert.Equal("Count: {0}", text.Text);
+
+        Localizer.Current.SetCulture("zh-CN");
+        Assert.Equal("数量：{0}", text.Text);
+    }
+
+    [Fact]
+    public void KeyBinding_RefreshesWhenAnArgumentChanges()
+    {
+        Localizer.Current.SetCulture("en-US");
+        var keySource = new BindingSource { Value = "Key.Message_Count" };
+        var argumentSource = new BindingSource { Value = "one" };
+        var extension = new DeferredTestLocalizeExtension
+        {
+            KeyBinding = new Binding(nameof(BindingSource.Value)) { Source = keySource },
+            Arg0 = new Binding(nameof(BindingSource.Value)) { Source = argumentSource },
+        };
+        var text = new TextBlock();
+
+        text.Bind(TextBlock.TextProperty, extension.CreateBinding());
+        Assert.Equal("Count: one", text.Text);
+
+        argumentSource.Value = "two";
+        Assert.Equal("Count: two", text.Text);
+    }
+
+    [Fact]
+    public void KeyBinding_CannotBeCombinedWithAStaticKey()
+    {
+        var extension = new TestLocalizeExtension("Key.Title_Hello")
+        {
+            KeyBinding = new Binding { Source = "Key.Message_Count" },
+        };
+
+        var error = Assert.Throws<InvalidOperationException>(() => extension.CreateBinding());
+
+        Assert.Contains("cannot be combined", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void LocalizeBinding_RejectsMixedArgumentForms()
     {
         var extension = new TestLocalizeExtension("Key.Message_Count")
@@ -104,7 +158,7 @@ public sealed class AvaloniaLocalizeExtensionTests
 
         var error = Assert.Throws<InvalidOperationException>(() => extension.CreateBinding());
 
-        Assert.Contains("Localize.Key", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Localize.Key or Localize.KeyBinding", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]

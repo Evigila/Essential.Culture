@@ -45,6 +45,12 @@ public abstract class WpfLocalizeExtensionBase : MarkupExtension
         }
     }
 
+    /// <summary>
+    /// Gets or sets a binding that supplies the stable localization token at runtime.
+    /// This property cannot be combined with the generated static <c>Key</c> property.
+    /// </summary>
+    public BindingBase? KeyBinding { get; set; }
+
     /// <summary>Gets or sets the first dynamic format argument.</summary>
     public BindingBase? Arg0 { get; set; }
 
@@ -65,12 +71,25 @@ public abstract class WpfLocalizeExtensionBase : MarkupExtension
     public override object ProvideValue(IServiceProvider serviceProvider)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
-        var selectedToken = Token;
+        var hasStaticToken = !string.IsNullOrWhiteSpace(token);
+        if (hasStaticToken && KeyBinding is not null)
+        {
+            throw new InvalidOperationException(
+                "Localize.Key and Localize.KeyBinding cannot be combined."
+            );
+        }
+
+        if (!hasStaticToken && KeyBinding is null)
+        {
+            throw new InvalidOperationException(
+                "Localize.Key or Localize.KeyBinding must be set before the markup extension is evaluated."
+            );
+        }
 
         var binding = new MultiBinding
         {
             Mode = BindingMode.OneWay,
-            Converter = new LocalizeMultiValueConverter(selectedToken),
+            Converter = new LocalizeMultiValueConverter(token, KeyBinding is not null),
         };
         binding.Bindings.Add(
             new Binding(nameof(CultureChangeSource.Version))
@@ -79,6 +98,11 @@ public abstract class WpfLocalizeExtensionBase : MarkupExtension
                 Source = CultureChangeSource.Instance,
             }
         );
+
+        if (KeyBinding is not null)
+        {
+            binding.Bindings.Add(KeyBinding);
+        }
 
         AddArgumentBindings(binding);
         return binding.ProvideValue(serviceProvider);
@@ -131,7 +155,8 @@ public abstract class WpfLocalizeExtensionBase : MarkupExtension
         }
     }
 
-    private sealed class LocalizeMultiValueConverter(string token) : IMultiValueConverter
+    private sealed class LocalizeMultiValueConverter(string? staticToken, bool usesKeyBinding)
+        : IMultiValueConverter
     {
         public object Convert(
             object[] values,
@@ -142,7 +167,25 @@ public abstract class WpfLocalizeExtensionBase : MarkupExtension
         {
             // values[0] is the culture version signal. It is intentionally not forwarded to
             // composite formatting; its only purpose is to invalidate this MultiBinding.
-            for (var index = 1; index < values.Length; index++)
+            var argumentStart = usesKeyBinding ? 2 : 1;
+            var resolvedToken = staticToken;
+            if (usesKeyBinding)
+            {
+                if (
+                    values.Length < 2
+                    || ReferenceEquals(values[1], DependencyProperty.UnsetValue)
+                    || ReferenceEquals(values[1], Binding.DoNothing)
+                    || values[1] is not string dynamicToken
+                    || string.IsNullOrWhiteSpace(dynamicToken)
+                )
+                {
+                    return DependencyProperty.UnsetValue;
+                }
+
+                resolvedToken = dynamicToken;
+            }
+
+            for (var index = argumentStart; index < values.Length; index++)
             {
                 if (
                     ReferenceEquals(values[index], DependencyProperty.UnsetValue)
@@ -153,13 +196,32 @@ public abstract class WpfLocalizeExtensionBase : MarkupExtension
                 }
             }
 
-            if (values.Length == 1)
+            var token = resolvedToken!;
+            var argumentCount = values.Length - argumentStart;
+            return argumentCount switch
             {
-                return Localizer.Parse(token);
-            }
+                0 => Localizer.Parse(token),
+                1 => Localizer.Parse(token, values[argumentStart]),
+                2 => Localizer.Parse(token, values[argumentStart], values[argumentStart + 1]),
+                3 => Localizer.Parse(
+                    token,
+                    values[argumentStart],
+                    values[argumentStart + 1],
+                    values[argumentStart + 2]
+                ),
+                _ => ParseMany(token, values, argumentStart, argumentCount),
+            };
+        }
 
-            var arguments = new object?[values.Length - 1];
-            Array.Copy(values, 1, arguments, 0, arguments.Length);
+        private static string ParseMany(
+            string token,
+            object[] values,
+            int argumentStart,
+            int argumentCount
+        )
+        {
+            var arguments = new object?[argumentCount];
+            Array.Copy(values, argumentStart, arguments, 0, argumentCount);
             return Localizer.Parse(token, arguments);
         }
 

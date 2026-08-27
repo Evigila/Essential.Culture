@@ -1,45 +1,48 @@
 # Essential.Culture
 
-`Essential.Culture` 是一个面向 .NET 的 JSON 文化管理组件。
+[英文](README.md) | [简体中文](README_zh-CN.md)
 
-它使用单一 `Culture.json` 管理文化键，通过 Source Generator 生成强类型键（源神启动！），并为 WPF、Avalonia 和 WinUI 3 提供运行时文化切换。
+`Essential.Culture` is a JSON-based localization component for .NET.
 
-## 功能
+It manages localization keys in a single `Culture.json` file, generates strongly typed keys through a Source Generator, and provides runtime culture switching for WPF, Avalonia, and WinUI 3.
 
-- `Culture.json` 是约定俗成的 JSON 名称，将自动被识别。
-- 源生成 `CultureKey` 和统一的 `Localize` XAML API，提供强类型键与编译期检查。
-- 通过 `Localizer.Parse(...)` 和 `Localizer.TryParse(...)` 解析文化键，支持参数化。
-- 通过 `Localizer.Current` 动态操作文化。
+## Features
 
-## 快速开始
+- `Culture.json` is the conventional JSON file name and is detected automatically.
+- Source generation provides the `CultureKey` enum and a unified `Localize` XAML API for strongly typed keys and compile-time validation.
+- `KeyBinding` allows collection items or runtime state to select localization keys dynamically.
+- `Localizer.Parse(...)` and `Localizer.TryParse(...)` resolve localization keys and support format arguments.
+- `Localizer.Current` provides runtime culture management.
 
-通过 Nuget 一键安装：
+## Quick start
 
-如果是 WPF 项目：
+Install the appropriate package from NuGet.
+
+For WPF:
 
 ```powershell
 dotnet add package Arkheide.Essential.Culture.Wpf
 ```
 
-如果是 Avalonia 项目：
+For Avalonia:
 
 ```powershell
 dotnet add package Arkheide.Essential.Culture.Avalonia
 ```
 
-如果是 WinUI 3 项目：
+For WinUI 3:
 
 ```powershell
 dotnet add package Arkheide.Essential.Culture.WinUI
 ```
 
-其他：
+For other project types:
 
 ```powershell
 dotnet add package Arkheide.Essential.Culture
 ```
 
-项目会自动创建 `Culture.json` 并包含默认内容，你可以创建自己的键和译文：
+The package automatically creates `Culture.json` with default content. You can then define your own keys and translations:
 
 ```json
 {
@@ -54,44 +57,50 @@ dotnet add package Arkheide.Essential.Culture
 }
 ```
 
-## 立即使用
+## Start using it
 
 > [!NOTE]
-> 如果 IntelliSense 尚未显示生成类型，请先构建一次项目。
+> If IntelliSense does not show the generated types yet, build the project once.
 
-WPF 使用 `Localize` ，参数可以直接使用 Binding：
+WPF uses `Localize`, and format arguments can use bindings directly:
 
 ```xml
 <Window xmlns:culture="clr-namespace:ArkheideSystem.Essential.Culture">
   <TextBlock Text="{culture:Localize Key=Greeting}" />
   <TextBlock Text="{culture:Localize Key=Welcome_User, Arg0={Binding UserName}}" />
+  <TextBlock Text="{culture:Localize KeyBinding={Binding CurrentTextKey}}" />
 </Window>
 ```
 
-Avalonia 使用相同 API，仅命名空间语法不同：
+Avalonia uses the same API with different namespace syntax:
 
 ```xml
 <Window xmlns:culture="using:ArkheideSystem.Essential.Culture">
   <TextBlock Text="{culture:Localize Key=Greeting}" />
   <TextBlock Text="{culture:Localize Key=Welcome_User, Arg0={Binding UserName}}" />
+  <TextBlock Text="{culture:Localize KeyBinding={Binding CurrentTextKey}}" />
 </Window>
 ```
 
-使用强类型 `Key=` 属性，让编辑器能够根据生成的 `CultureKey` 枚举提供键候选。
+Use the strongly typed `Key=` property so the editor can suggest keys from the generated `CultureKey` enum. When the key comes from the DataContext or runtime state, use `KeyBinding=`.
 
-WinUI 3 的动态参数通过同一 `Localize` 类型的附加属性提供：
+WinUI 3 exposes dynamic arguments through attached properties on the same `Localize` type:
 
 ```xml
 <Window xmlns:culture="using:ArkheideSystem.Essential.Culture">
   <TextBlock Text="{culture:Localize Key=Greeting}" />
   <TextBlock Text="{culture:Localize Key=Welcome_User}"
              culture:Localize.Argument0="{x:Bind ViewModel.UserName, Mode=OneWay}" />
+  <TextBlock Text="{culture:Localize}"
+             culture:Localize.KeyBinding="{x:Bind ViewModel.CurrentTextKey, Mode=OneWay}" />
 </Window>
 ```
 
-## 源生成
+`Key` and `KeyBinding` cannot be used together. `Localize` resolves the target text again whenever the static key, dynamic key, format arguments, or current culture changes. Applications do not need to subscribe to culture events themselves.
 
-Generator 会自动获取 `Culture.json`，并在构建和发布时复制到输出目录。默认文件会生成 `CultureKey` 枚举、`Key` token，以及 UI 项目使用的 `Localize` 静态入口：
+## Source generation
+
+The Generator automatically discovers `Culture.json` and copies it to the output directory during build and publish. By default, it generates the `CultureKey` enum, `Key` tokens, and the `Localize` static entry point used by UI projects:
 
 ```csharp
 namespace ArkheideSystem.Essential.Culture;
@@ -111,20 +120,20 @@ public static class Key
 using ArkheideSystem.Essential.Culture;
 using GeneratedKey = global::ArkheideSystem.Essential.Culture.Key;
 
-// 输出译文
+// Print the translated text
 Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting));
 
-// 切换文化
+// Change the current culture
 Localizer.Current.SetCulture("zh-CN");
 
-// 再次输出译文，无需管理文化切换
+// Print the translated text again without managing culture-change events
 Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting));
 ```
 
 > [!NOTE]
-> 默认文化与 fallback 均为 `en-US`。
+> The default culture and fallback culture are both `en-US`.
 
-如需覆盖生成类型所在命名空间，可在项目中设置：
+To override the namespace of generated types, add the following project setting:
 
 ```xml
 <PropertyGroup>
@@ -132,7 +141,7 @@ Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting));
 </PropertyGroup>
 ```
 
-自动生成 `Culture.json` 时已有的文件不会被覆盖。创建后可以直接编辑该文件，添加自己的文化键和译文。如需禁止自动创建，可在项目文件中设置：
+Automatic creation never overwrites an existing `Culture.json`. After it is created, edit the file directly to add your own localization keys and translations. To disable automatic creation, add this project setting:
 
 ```xml
 <PropertyGroup>
@@ -140,15 +149,15 @@ Console.WriteLine(Localizer.Parse(GeneratedKey.Greeting));
 </PropertyGroup>
 ```
 
-## 包
+## Packages
 
-| 包 | 用途 |
+| Package | Purpose |
 | --- | --- |
-| `Arkheide.Essential.Culture` | 解析文化状态与 `Localizer` 静态入口 |
-| `Arkheide.Essential.Culture.Generator` | 从 `Culture.json` 生成强类型键；通常自传递，无需单独安装 |
-| `Arkheide.Essential.Culture.Wpf` | WPF 强类型 `Localize` XAML Binding |
-| `Arkheide.Essential.Culture.Avalonia` | Avalonia 强类型 `Localize` XAML Binding |
-| `Arkheide.Essential.Culture.WinUI` | WinUI 3 强类型 `Localize` 与窗口刷新基础设施 |
+| `Arkheide.Essential.Culture` | Culture resolution and the static `Localizer` entry point |
+| `Arkheide.Essential.Culture.Generator` | Generates strongly typed keys from `Culture.json`; normally included transitively and does not need to be installed separately |
+| `Arkheide.Essential.Culture.Wpf` | Strongly typed WPF `Localize` XAML binding |
+| `Arkheide.Essential.Culture.Avalonia` | Strongly typed Avalonia `Localize` XAML binding |
+| `Arkheide.Essential.Culture.WinUI` | Strongly typed WinUI 3 `Localize` support and window refresh infrastructure |
 
 ```powershell
 dotnet add package Arkheide.Essential.Culture
@@ -157,22 +166,21 @@ dotnet add package Arkheide.Essential.Culture.Avalonia
 dotnet add package Arkheide.Essential.Culture.WinUI
 ```
 
-## AI 辅助
+## AI assistance
 
 > [!IMPORTANT]
-本库使用了 AI Agent (ChatGPT Codex) 技术来辅助编写。  
-欢迎使用任何形式的 AI 辅助进行维护和创作，**但在提交前人工审核是必要的**。
+> This library was developed with assistance from AI Agent (ChatGPT Codex).
+> All forms of AI assistance are welcome for maintenance and development, **but human review is required before submission**.
 
-## 文档与示例
+## Documentation and examples
 
-- [完整使用指南](docs/usage-guide.md)
-- [Demo 总览](demo/README.md)
+- [Complete usage guide](docs/usage-guide.md)
+- [Demo overview](demo/README.md)
 - [Console Demo](demo/Essential.Culture.Demo.Console/README.md)
 - [WPF Demo](demo/Essential.Culture.Demo.Wpf/README.md)
 - [Avalonia Demo](demo/Essential.Culture.Demo.Avalonia/README.md)
 - [WinUI 3 Demo](demo/Essential.Culture.Demo.WinUI3/README.md)
-- [测试项目说明](tests/README.md)
 
-## 许可证
+## License
 
-使用 [MIT License](LICENSE.txt)。
+Licensed under the [MIT License](LICENSE.txt).

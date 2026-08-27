@@ -354,12 +354,25 @@ public sealed class WinUILocalizationHost : IWinUILocalizationHost
     )
     {
         var pending = new Stack<DependencyObject>();
+        var discovered = new HashSet<DependencyObject>(ReferenceEqualityComparer.Instance);
         pending.Push(root);
 
         while (pending.Count > 0)
         {
             var current = pending.Pop();
+            if (!discovered.Add(current))
+            {
+                continue;
+            }
+
             DiscoverObject(current, registration, strongTracking);
+            if (current is ContentDialog { Content: DependencyObject content })
+            {
+                // A closed ContentDialog owns its content logically, but WinUI does not expose
+                // that content through VisualTreeHelper until the dialog enters its popup tree.
+                pending.Push(content);
+            }
+
             var childCount = VisualTreeHelper.GetChildrenCount(current);
             for (var index = 0; index < childCount; index++)
             {
@@ -438,7 +451,8 @@ public sealed class WinUILocalizationHost : IWinUILocalizationHost
 
         if (tracked is null)
         {
-            if (!TryResolveMarker(target, value, out var resolved))
+            var resolution = ResolveMarker(target, value, out var resolved);
+            if (resolution == MarkerResolution.NotMarker)
             {
                 return;
             }
@@ -480,7 +494,7 @@ public sealed class WinUILocalizationHost : IWinUILocalizationHost
         }
     }
 
-    internal static void RefreshArguments(DependencyObject target)
+    internal static void RefreshInputs(DependencyObject target)
     {
         if (target is TextBlock)
         {
@@ -537,7 +551,7 @@ public sealed class WinUILocalizationHost : IWinUILocalizationHost
         }
     }
 
-    private static bool TryResolveMarker(
+    private static MarkerResolution ResolveMarker(
         DependencyObject target,
         string value,
         out string resolved
@@ -546,13 +560,38 @@ public sealed class WinUILocalizationHost : IWinUILocalizationHost
         if (!WinUILocalizationMarker.TryExtract(value, out var token))
         {
             resolved = value;
-            return false;
+            return MarkerResolution.NotMarker;
+        }
+
+        if (token is null)
+        {
+            token = WinUILocalizeExtensionBase.GetKeyBinding(target);
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                resolved = string.Empty;
+                return MarkerResolution.Pending;
+            }
+        }
+        else if (
+            target.ReadLocalValue(WinUILocalizeExtensionBase.KeyBindingProperty)
+            != DependencyProperty.UnsetValue
+        )
+        {
+            throw new InvalidOperationException(
+                "Key and KeyBinding cannot be used on the same Localize expression."
+            );
         }
 
         var arguments = WinUILocalizeExtensionBase.GetCurrentArguments(target);
-        return arguments.Length == 0
+        var parsed = arguments.Length == 0
             ? Localizer.TryParse(token, out resolved)
             : Localizer.TryParse(token, arguments, out resolved);
+        if (!parsed)
+        {
+            resolved = token;
+        }
+
+        return MarkerResolution.Resolved;
     }
 
     private static bool TryResolveMarker(string value, out string resolved)
@@ -561,6 +600,13 @@ public sealed class WinUILocalizationHost : IWinUILocalizationHost
         {
             resolved = value;
             return false;
+        }
+
+        if (token is null)
+        {
+            throw new InvalidOperationException(
+                "KeyBinding requires a WinUI DependencyObject target and cannot localize Window.Title."
+            );
         }
 
         return Localizer.TryParse(token, out resolved);
@@ -816,14 +862,14 @@ public sealed class WinUILocalizationHost : IWinUILocalizationHost
             string resolved;
             if (!string.Equals(value, LastResolved, StringComparison.Ordinal))
             {
-                if (!TryResolveMarker(target, value, out resolved))
+                if (ResolveMarker(target, value, out resolved) == MarkerResolution.NotMarker)
                 {
                     return false;
                 }
 
                 Marker = value;
             }
-            else if (!TryResolveMarker(target, Marker, out resolved))
+            else if (ResolveMarker(target, Marker, out resolved) == MarkerResolution.NotMarker)
             {
                 return false;
             }
@@ -873,5 +919,12 @@ public sealed class WinUILocalizationHost : IWinUILocalizationHost
                 typeof(WinUILocalizationHost),
                 new PropertyMetadata(null)
             );
+    }
+
+    private enum MarkerResolution
+    {
+        NotMarker,
+        Pending,
+        Resolved,
     }
 }

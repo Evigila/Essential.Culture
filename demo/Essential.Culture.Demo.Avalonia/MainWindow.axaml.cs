@@ -2,11 +2,14 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using CKey = ArkheideSystem.Essential.Culture.Key;
 
 namespace ArkheideSystem.Essential.Culture.Demo.Avalonia;
 
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
+    private bool isGirl;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -17,7 +20,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     public string CurrentCulture => Localizer.Current.Culture;
 
-    public string ProductName => "Arkheide";
+    public bool IsGirl
+    {
+        get => isGirl;
+        set
+        {
+            if (isGirl == value)
+            {
+                return;
+            }
+
+            isGirl = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(GreetingKey));
+        }
+    }
+
+    public string GreetingKey => IsGirl ? CKey.Greeting_Girl : CKey.Greeting_Boy;
 
     public new event PropertyChangedEventHandler? PropertyChanged;
 
@@ -28,7 +47,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async void ShowGreeting_Click(object? sender, RoutedEventArgs e)
     {
-        var dialog = new GreetingDialog();
+        var dialog = new GreetingDialog(GreetingKey);
         await dialog.ShowDialog(this);
     }
 

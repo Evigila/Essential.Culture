@@ -7,6 +7,18 @@
     "en-US": "Hello, {0}!",
     "zh-CN": "你好，{0}！"
   },
+  "Greeting_Boy": {
+    "en-US": "Hello, World! Hello, Boy!",
+    "zh-CN": "你好，世界！你好，男孩！"
+  },
+  "Greeting_Girl": {
+    "en-US": "Hello, World! Hello, Girl!",
+    "zh-CN": "你好，世界！你好，女孩！"
+  },
+  "Identity_IsGirl": {
+    "en-US": "I'm a girl",
+    "zh-CN": "我是女孩"
+  },
   "Description": {
     "en-US": "Strongly typed keys and instant culture switching.",
     "zh-CN": "强类型键，即时切换文化。"

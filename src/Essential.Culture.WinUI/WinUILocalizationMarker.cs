@@ -18,25 +18,33 @@ internal static class WinUILocalizationMarker
         return string.Concat(Prefix, token, Suffix);
     }
 
-    public static bool TryExtract(string value, out string token)
+    public static string CreateDynamic() => string.Concat(Prefix, Suffix);
+
+    public static bool TryExtract(string value, out string? token)
     {
         if (
-            value.Length <= Prefix.Length + 1
+            value.Length < Prefix.Length + 1
             || !value.StartsWith(Prefix, StringComparison.Ordinal)
             || value[^1] != Suffix
         )
         {
-            token = string.Empty;
+            token = null;
             return false;
         }
 
         token = value.Substring(Prefix.Length, value.Length - Prefix.Length - 1);
+        if (token.Length == 0)
+        {
+            token = null;
+            return true;
+        }
+
         if (token.StartsWith(KeyToken.Prefix, StringComparison.Ordinal))
         {
             return true;
         }
 
-        token = string.Empty;
+        token = null;
         return false;
     }
 }

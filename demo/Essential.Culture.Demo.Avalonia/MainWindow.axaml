@@ -31,7 +31,7 @@
           Foreground="#111827"
         />
         <TextBlock
-          Text="{culture:Localize Key=Greeting, Arg0={Binding ProductName}}"
+          Text="{culture:Localize KeyBinding={Binding GreetingKey}}"
           Margin="0,24,0,0"
           FontSize="24"
           FontWeight="SemiBold"
@@ -50,6 +50,13 @@
           Margin="0,20,0,0"
           FontSize="14"
           Foreground="#6B7280"
+        />
+        <CheckBox
+          Content="{culture:Localize Key=Identity_IsGirl}"
+          IsChecked="{Binding IsGirl}"
+          Margin="0,24,0,0"
+          FontSize="14"
+          Foreground="#374151"
         />
         <StackPanel Margin="0,32,0,0" Orientation="Horizontal" Spacing="12">
           <Button

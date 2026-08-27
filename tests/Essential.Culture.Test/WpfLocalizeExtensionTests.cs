@@ -65,6 +65,155 @@ public sealed class WpfLocalizeExtensionTests
     }
 
     [Fact]
+    public void KeyBinding_RefreshesWhenKeyOrCultureChanges()
+    {
+        RunSta(() =>
+        {
+            Localizer.Current.SetCulture("en-US");
+            var text = ParseTextBlock(
+                """
+                <TextBlock
+                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                  xmlns:test="clr-namespace:ArkheideSystem.Essential.Culture.Test;assembly=Essential.Culture.Test"
+                  Text="{test:WpfTestLocalize KeyBinding={Binding TranslationKey}}" />
+                """
+            );
+            var model = new WpfLocalizeTestModel { TranslationKey = "Key.Title_Hello" };
+            text.DataContext = model;
+            DrainDispatcher();
+
+            Assert.Equal("Hello World!", text.Text);
+
+            model.TranslationKey = "Key.Message_Count";
+            DrainDispatcher();
+            Assert.Equal("Count: {0}", text.Text);
+
+            Localizer.Current.SetCulture("zh-CN");
+            DrainDispatcher();
+            Assert.Equal("数量：{0}", text.Text);
+        });
+    }
+
+    [Fact]
+    public void KeyBinding_RefreshesWhenAnArgumentChanges()
+    {
+        RunSta(() =>
+        {
+            Localizer.Current.SetCulture("en-US");
+            var text = ParseTextBlock(
+                """
+                <TextBlock
+                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                  xmlns:test="clr-namespace:ArkheideSystem.Essential.Culture.Test;assembly=Essential.Culture.Test"
+                  Text="{test:WpfTestLocalize KeyBinding={Binding TranslationKey}, Arg0={Binding Count}}" />
+                """
+            );
+            var model = new WpfLocalizeTestModel
+            {
+                TranslationKey = "Key.Message_Count",
+                Count = 3,
+            };
+            text.DataContext = model;
+            DrainDispatcher();
+
+            Assert.Equal("Count: 3", text.Text);
+
+            model.Count = 9;
+            DrainDispatcher();
+            Assert.Equal("Count: 9", text.Text);
+        });
+    }
+
+    [Fact]
+    public void KeyBinding_WaitsForADeferredDataContext()
+    {
+        RunSta(() =>
+        {
+            Localizer.Current.SetCulture("en-US");
+            var text = ParseTextBlock(
+                """
+                <TextBlock
+                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                  xmlns:test="clr-namespace:ArkheideSystem.Essential.Culture.Test;assembly=Essential.Culture.Test"
+                  Text="{test:WpfTestLocalize KeyBinding={Binding TranslationKey}}" />
+                """
+            );
+            DrainDispatcher();
+
+            Assert.Equal(string.Empty, text.Text);
+
+            text.DataContext = new WpfLocalizeTestModel
+            {
+                TranslationKey = "Key.Title_Hello",
+            };
+            DrainDispatcher();
+            Assert.Equal("Hello World!", text.Text);
+        });
+    }
+
+    [Fact]
+    public void KeyBinding_CanBeUsedByADataGridTextColumn()
+    {
+        RunSta(() =>
+        {
+            var grid = Assert.IsType<DataGrid>(
+                XamlReader.Parse(
+                    """
+                    <DataGrid
+                      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                      xmlns:test="clr-namespace:ArkheideSystem.Essential.Culture.Test;assembly=Essential.Culture.Test"
+                      AutoGenerateColumns="False">
+                      <DataGrid.Columns>
+                        <DataGridTextColumn
+                          Binding="{test:WpfTestLocalize KeyBinding={Binding TranslationKey}}" />
+                      </DataGrid.Columns>
+                    </DataGrid>
+                    """
+                )
+            );
+
+            var column = Assert.IsType<DataGridTextColumn>(Assert.Single(grid.Columns));
+            Assert.IsType<System.Windows.Data.MultiBinding>(column.Binding);
+        });
+    }
+
+    [Fact]
+    public void KeyBinding_CannotBeCombinedWithAStaticKey()
+    {
+        RunSta(() =>
+        {
+            var error = Assert.Throws<XamlParseException>(() =>
+                ParseTextBlock(
+                    """
+                    <TextBlock
+                      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                      xmlns:test="clr-namespace:ArkheideSystem.Essential.Culture.Test;assembly=Essential.Culture.Test"
+                      Text="{test:WpfTestLocalize Key.Title_Hello, KeyBinding={Binding TranslationKey}}" />
+                    """
+                )
+            );
+
+            Assert.IsType<InvalidOperationException>(error.InnerException);
+            Assert.Contains("cannot be combined", error.InnerException.Message, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public void LocalizeBinding_RequiresAStaticOrDynamicKey()
+    {
+        RunSta(() =>
+        {
+            var extension = new WpfTestLocalizeExtension();
+
+            var error = Assert.Throws<InvalidOperationException>(() =>
+                extension.ProvideValue(new EmptyServiceProvider())
+            );
+
+            Assert.Contains("KeyBinding", error.Message, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
     public void ArgumentsContentCollection_SupportsMoreThanThreeBindings()
     {
         RunSta(() =>
@@ -190,6 +339,7 @@ public sealed class WpfTestLocalizeExtension : WpfLocalizeExtensionBase
 public sealed class WpfLocalizeTestModel : INotifyPropertyChanged
 {
     private int count;
+    private string translationKey = string.Empty;
 
     public int Count
     {
@@ -206,5 +356,25 @@ public sealed class WpfLocalizeTestModel : INotifyPropertyChanged
         }
     }
 
+    public string TranslationKey
+    {
+        get => translationKey;
+        set
+        {
+            if (translationKey == value)
+            {
+                return;
+            }
+
+            translationKey = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TranslationKey)));
+        }
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
+}
+
+internal sealed class EmptyServiceProvider : IServiceProvider
+{
+    public object? GetService(Type serviceType) => null;
 }

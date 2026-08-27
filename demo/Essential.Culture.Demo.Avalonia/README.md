@@ -7,7 +7,7 @@
 安装：
 
 ```xml
-<PackageReference Include="Arkheide.Essential.Culture.Avalonia" Version="1.1.0" />
+<PackageReference Include="Arkheide.Essential.Culture.Avalonia" Version="1.2.0" />
 ```
 
 框架包会自动传递 Core 和 Generator。
@@ -35,13 +35,26 @@ public override void OnFrameworkInitializationCompleted()
 ```xml
 <Window xmlns:culture="using:ArkheideSystem.Essential.Culture"
         Title="{culture:Localize Key=App_Title}">
-  <TextBlock Text="{culture:Localize Key=Greeting,
-                    Arg0={Binding ProductName}}" />
+  <TextBlock Text="{culture:Localize KeyBinding={Binding GreetingKey}}" />
+  <CheckBox Content="{culture:Localize Key=Identity_IsGirl}"
+            IsChecked="{Binding IsGirl}" />
   <Button Content="{culture:Localize Key=Action_SwitchLanguage}" />
 </Window>
 ```
 
-`Localize` 自动处理文化与参数 Binding，因此任一输入变化都会重新执行参数化解析。无参数翻译也使用同一个 API。
+`Localize` 自动处理文化、动态键和参数 Binding，因此任一输入变化都会重新解析。
+
+## 动态翻译键
+
+```csharp
+public string GreetingKey => IsGirl ? CKey.Greeting_Girl : CKey.Greeting_Boy;
+```
+
+```xml
+<TextBlock Text="{culture:Localize KeyBinding={Binding GreetingKey}}" />
+```
+
+复选框默认未选中。点击“问候”后，主窗口把当前 Token 传给 `GreetingDialog`，对话框通过 `KeyBinding` 输出男孩或女孩问候，不在代码中调用 `Localizer.Parse`。
 
 参数较多时可以使用对象元素形式的 `Arguments` 内容集合：
 
@@ -55,11 +68,9 @@ public override void OnFrameworkInitializationCompleted()
 
 ## 参数化文本
 
-`Culture.json` 的 `Greeting` 与 `Current_Culture` 均包含 `{0}`。Demo 直接绑定 `ProductName` 和 `CurrentCulture`：
+`Culture.json` 的 `Current_Culture` 包含 `{0}`。Demo 直接绑定 `CurrentCulture`：
 
 ```xml
-<TextBlock Text="{culture:Localize Key=Greeting,
-                  Arg0={Binding ProductName}}" />
 <TextBlock Text="{culture:Localize Key=Current_Culture,
                   Arg0={Binding CurrentCulture}}" />
 ```

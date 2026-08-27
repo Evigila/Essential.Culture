@@ -134,7 +134,7 @@ public sealed class CultureGeneratorTests
     }
 
     [Fact]
-    public void Referenced_winui_adapter_generates_key_property_and_attached_arguments()
+    public void Referenced_winui_adapter_generates_key_property_key_binding_and_attached_arguments()
     {
         var result = RunGenerator(
             documents:
@@ -175,6 +175,9 @@ public sealed class CultureGeneratorTests
             source,
             StringComparison.Ordinal
         );
+        Assert.Contains("KeyBindingProperty", source, StringComparison.Ordinal);
+        Assert.Contains("GetKeyBinding", source, StringComparison.Ordinal);
+        Assert.Contains("SetKeyBinding", source, StringComparison.Ordinal);
         Assert.Contains("Argument0Property", source, StringComparison.Ordinal);
         Assert.Contains("SetArguments", source, StringComparison.Ordinal);
     }

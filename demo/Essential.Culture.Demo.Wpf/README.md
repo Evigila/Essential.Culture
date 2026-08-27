@@ -7,7 +7,7 @@
 安装：
 
 ```xml
-<PackageReference Include="Arkheide.Essential.Culture.Wpf" Version="1.1.0" />
+<PackageReference Include="Arkheide.Essential.Culture.Wpf" Version="1.2.0" />
 ```
 
 框架包会自动传递 Core 和 Generator。
@@ -19,21 +19,36 @@ Generator 默认在 `ArkheideSystem.Essential.Culture` 中产生 `CultureKey`、
 ```xml
 <Window xmlns:culture="clr-namespace:ArkheideSystem.Essential.Culture"
         Title="{culture:Localize Key=App_Title}">
-  <TextBlock Text="{culture:Localize Key=Greeting,
-                    Arg0={Binding ProductName}}" />
+  <TextBlock Text="{culture:Localize KeyBinding={Binding GreetingKey}}" />
+  <CheckBox Content="{culture:Localize Key=Identity_IsGirl}"
+            IsChecked="{Binding IsGirl}" />
   <Button Content="{culture:Localize Key=Action_SwitchLanguage}" />
 </Window>
 ```
 
-`Localize` 返回 WPF `MultiBinding`，因此 `ProductName` 变化和文化变化都会保留参数并重新解析。
+`GreetingKey` 在 `Greeting_Boy` 与 `Greeting_Girl` 之间切换。`Localize` 返回 WPF `MultiBinding`，因此翻译键或文化变化时都会重新解析。
+
+## 动态翻译键
+
+复选框默认未选中，对应男孩问候：
+
+```csharp
+public string GreetingKey => IsGirl ? CKey.Greeting_Girl : CKey.Greeting_Boy;
+```
+
+主窗口和弹窗都直接绑定这个 Key：
+
+```xml
+<TextBlock Text="{culture:Localize KeyBinding={Binding GreetingKey}}" />
+```
+
+点击“问候”后，Demo 创建一个极简 WPF 弹窗并把 `GreetingKey` 作为数据传入；最终译文仍由 `KeyBinding` 从 `Culture.json` 解析。
 
 ## 参数化文本
 
-Demo 的 `Greeting` 和 `Current_Culture` 都包含 `{0}`，参数直接绑定到窗口属性：
+Demo 的 `Current_Culture` 包含 `{0}`，参数直接绑定到窗口属性：
 
 ```xml
-<TextBlock Text="{culture:Localize Key=Greeting,
-                  Arg0={Binding ProductName}}" />
 <TextBlock Text="{culture:Localize Key=Current_Culture,
                   Arg0={Binding CurrentCulture}}" />
 ```

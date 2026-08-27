@@ -33,6 +33,12 @@ public abstract class AvaloniaLocalizeExtensionBase
     /// <summary>Gets or sets the stable token resolved by this markup extension.</summary>
     protected string? Token { get; set; }
 
+    /// <summary>
+    /// Gets or sets a binding that supplies the stable localization token at runtime.
+    /// This property cannot be combined with the generated static <c>Key</c> property.
+    /// </summary>
+    public BindingBase? KeyBinding { get; set; }
+
     /// <summary>Gets or sets the first argument binding.</summary>
     public BindingBase? Arg0 { get; set; }
 
@@ -56,10 +62,18 @@ public abstract class AvaloniaLocalizeExtensionBase
     public MultiBinding ProvideValue(IServiceProvider serviceProvider)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
-        if (string.IsNullOrWhiteSpace(Token))
+        var hasStaticToken = !string.IsNullOrWhiteSpace(Token);
+        if (hasStaticToken && KeyBinding is not null)
         {
             throw new InvalidOperationException(
-                "Localize.Key must be set before the markup extension is evaluated."
+                "Localize.Key and Localize.KeyBinding cannot be combined."
+            );
+        }
+
+        if (!hasStaticToken && KeyBinding is null)
+        {
+            throw new InvalidOperationException(
+                "Localize.Key or Localize.KeyBinding must be set before the markup extension is evaluated."
             );
         }
 
@@ -67,7 +81,7 @@ public abstract class AvaloniaLocalizeExtensionBase
 
         var result = new MultiBinding
         {
-            Converter = new LocalizationConverter(Token),
+            Converter = new LocalizationConverter(Token, KeyBinding is not null),
             Mode = BindingMode.OneWay,
         };
 
@@ -78,6 +92,11 @@ public abstract class AvaloniaLocalizeExtensionBase
                 Mode = BindingMode.OneWay,
             }
         );
+
+        if (KeyBinding is not null)
+        {
+            result.Bindings.Add(KeyBinding);
+        }
 
         if (Arguments.Count != 0)
         {
@@ -124,7 +143,8 @@ public abstract class AvaloniaLocalizeExtensionBase
         }
     }
 
-    private sealed class LocalizationConverter(string token) : IMultiValueConverter
+    private sealed class LocalizationConverter(string? staticToken, bool usesKeyBinding)
+        : IMultiValueConverter
     {
         public object? Convert(
             IList<object?> values,
@@ -138,22 +158,64 @@ public abstract class AvaloniaLocalizeExtensionBase
                 return BindingOperations.DoNothing;
             }
 
-            var argumentCount = values.Count - 1;
-            if (argumentCount == 0)
+            var argumentStart = usesKeyBinding ? 2 : 1;
+            var resolvedToken = staticToken;
+            if (usesKeyBinding)
             {
-                return Localizer.Parse(token);
-            }
-
-            var arguments = new object?[argumentCount];
-            for (var index = 0; index < argumentCount; index++)
-            {
-                var value = values[index + 1];
-                if (ReferenceEquals(value, AvaloniaProperty.UnsetValue))
+                if (
+                    values.Count < 2
+                    || ReferenceEquals(values[1], AvaloniaProperty.UnsetValue)
+                    || ReferenceEquals(values[1], BindingOperations.DoNothing)
+                    || values[1] is not string dynamicToken
+                    || string.IsNullOrWhiteSpace(dynamicToken)
+                )
                 {
                     return BindingOperations.DoNothing;
                 }
 
-                arguments[index] = value;
+                resolvedToken = dynamicToken;
+            }
+
+            var argumentCount = values.Count - argumentStart;
+            for (var index = argumentStart; index < values.Count; index++)
+            {
+                var value = values[index];
+                if (
+                    ReferenceEquals(value, AvaloniaProperty.UnsetValue)
+                    || ReferenceEquals(value, BindingOperations.DoNothing)
+                )
+                {
+                    return BindingOperations.DoNothing;
+                }
+            }
+
+            var token = resolvedToken!;
+            return argumentCount switch
+            {
+                0 => Localizer.Parse(token),
+                1 => Localizer.Parse(token, values[argumentStart]),
+                2 => Localizer.Parse(token, values[argumentStart], values[argumentStart + 1]),
+                3 => Localizer.Parse(
+                    token,
+                    values[argumentStart],
+                    values[argumentStart + 1],
+                    values[argumentStart + 2]
+                ),
+                _ => ParseMany(token, values, argumentStart, argumentCount),
+            };
+        }
+
+        private static string ParseMany(
+            string token,
+            IList<object?> values,
+            int argumentStart,
+            int argumentCount
+        )
+        {
+            var arguments = new object?[argumentCount];
+            for (var index = 0; index < argumentCount; index++)
+            {
+                arguments[index] = values[index + argumentStart];
             }
 
             return Localizer.Parse(token, arguments);

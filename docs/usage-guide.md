@@ -256,6 +256,63 @@ WPF 与 Avalonia 可使用 `Arg0`、`Arg1`、`Arg2`。参数必须是 Binding；
 > [!NOTE]
 > 如果 IntelliSense 尚未更新，请先构建一次项目。
 
+### 动态翻译键 KeyBinding
+
+`Key=` 用于在 XAML 中静态选择翻译键；键来自 DataContext、集合项或运行时状态时，使用 `KeyBinding=`：
+
+```csharp
+public string CurrentTextKey { get; set; } = Key.App_Title;
+```
+
+WPF：
+
+```xml
+<TextBlock Text="{culture:Localize KeyBinding={Binding CurrentTextKey}}" />
+```
+
+Avalonia：
+
+```xml
+<TextBlock Text="{culture:Localize KeyBinding={Binding CurrentTextKey}}" />
+```
+
+WinUI 3 使用同一 `Localize` 类型的附加属性：
+
+```xml
+<TextBlock
+    Text="{culture:Localize}"
+    culture:Localize.KeyBinding="{x:Bind CurrentTextKey, Mode=OneWay}" />
+```
+
+`KeyBinding` 绑定的是 Generator 产生的 `Key.*` 字符串。
+
+```text
+CurrentTextKey
+  → "Key.App_Title"
+  → Localizer 按当前文化查找
+  → 目标属性显示真实译文
+```
+
+行为规则：
+
+- `Key` 和 `KeyBinding` 是互斥的键来源，不能同时设置。
+- 动态 Key、格式参数或者当前文化变化时，目标文本都会重新解析。
+- `KeyBinding` 可以和 `Arg0`、`Arg1`、`Arg2` 或 `Arguments` 组合。
+- ViewModel 只负责暴露 Token，不需要调用 `Localizer.Parse` 或监听 `Localizer.Current.Changed`。
+
+例如集合中的每一项可以选择不同的说明键：
+
+```csharp
+public sealed record MemberRow(string Name, string DescriptionKey);
+
+var row = new MemberRow("Title", Key.Controls_TitleDescription);
+```
+
+```xml
+<DataGridTextColumn
+    Binding="{culture:Localize KeyBinding={Binding DescriptionKey}}" />
+```
+
 ## WPF
 
 安装：

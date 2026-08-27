@@ -413,6 +413,20 @@ public sealed class CultureGenerator : IIncrementalGenerator
         string baseType
     )
     {
+        source.AppendLine();
+        source
+            .Append("    public new static readonly global::Microsoft.UI.Xaml.DependencyProperty KeyBindingProperty = ")
+            .Append(baseType)
+            .AppendLine(".KeyBindingProperty;");
+        source
+            .Append("    public new static string? GetKeyBinding(global::Microsoft.UI.Xaml.DependencyObject target) => ")
+            .Append(baseType)
+            .AppendLine(".GetKeyBinding(target);");
+        source
+            .Append("    public new static void SetKeyBinding(global::Microsoft.UI.Xaml.DependencyObject target, string? value) => ")
+            .Append(baseType)
+            .AppendLine(".SetKeyBinding(target, value);");
+
         foreach (var index in new[] { "0", "1", "2" })
         {
             source.AppendLine();

@@ -3,7 +3,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.Graphics;
-using DemoKey = ArkheideSystem.Essential.Culture.Key;
+using CKey = ArkheideSystem.Essential.Culture.Key;
 
 namespace ArkheideSystem.Essential.Culture.Demo.WinUI3;
 
@@ -11,12 +11,29 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
 {
     private const int WindowWidth = 1280;
     private const int WindowHeight = 720;
+    private bool isGirl;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public string ProductName { get; } = "Arkheide";
-
     public string CurrentCulture { get; private set; } = Localizer.Current.Culture;
+
+    public bool IsGirl
+    {
+        get => isGirl;
+        set
+        {
+            if (isGirl == value)
+            {
+                return;
+            }
+
+            isGirl = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsGirl)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(GreetingKey)));
+        }
+    }
+
+    public string GreetingKey => IsGirl ? CKey.Greeting_Girl : CKey.Greeting_Boy;
 
     public MainWindow()
     {
@@ -71,14 +88,7 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
 
     private async void ShowGreeting_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new ContentDialog
-        {
-            Title = Localizer.Parse(DemoKey.App_Title),
-            Content = Localizer.Parse(DemoKey.Greeting, ProductName),
-            CloseButtonText = Localizer.Parse(DemoKey.Action_Close),
-            XamlRoot = Root.XamlRoot,
-        };
-
-        await dialog.ShowAsync();
+        GreetingDialog.XamlRoot = Root.XamlRoot;
+        await GreetingDialog.ShowAsync();
     }
 }

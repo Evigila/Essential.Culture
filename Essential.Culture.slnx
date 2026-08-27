@@ -6,4 +6,5 @@
   <Project Path="src/Essential.Culture.Generator/Essential.Culture.Generator.csproj" />
   <Project Path="tests/Essential.Culture.Generator.Test/Essential.Culture.Generator.Test.csproj" />
   <Project Path="tests/Essential.Culture.Test/Essential.Culture.Test.csproj" />
+  <Project Path="tests/Essential.Culture.WinUI.Test/Essential.Culture.WinUI.Test.csproj" />
 </Solution>

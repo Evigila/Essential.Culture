@@ -7,7 +7,7 @@
 安装：
 
 ```xml
-<PackageReference Include="Arkheide.Essential.Culture" Version="1.1.0" />
+<PackageReference Include="Arkheide.Essential.Culture" Version="1.2.0" />
 ```
 
 Core 包会自动传递 Generator；Demo 不需要单独引用 Generator。

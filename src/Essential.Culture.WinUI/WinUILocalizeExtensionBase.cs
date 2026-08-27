@@ -9,13 +9,24 @@ namespace ArkheideSystem.Essential.Culture.WinUI;
 /// </summary>
 public abstract class WinUILocalizeExtensionBase : MarkupExtension
 {
+    /// <summary>
+    /// Identifies the localization token binding used when the key is selected at runtime.
+    /// </summary>
+    public static readonly DependencyProperty KeyBindingProperty =
+        DependencyProperty.RegisterAttached(
+            "KeyBinding",
+            typeof(string),
+            typeof(WinUILocalizeExtensionBase),
+            new PropertyMetadata(null, OnLocalizationInputChanged)
+        );
+
     /// <summary>Identifies the first localization format argument.</summary>
     public static readonly DependencyProperty Argument0Property =
         DependencyProperty.RegisterAttached(
             "Argument0",
             typeof(object),
             typeof(WinUILocalizeExtensionBase),
-            new PropertyMetadata(null, OnArgumentChanged)
+            new PropertyMetadata(null, OnLocalizationInputChanged)
         );
 
     /// <summary>Identifies the second localization format argument.</summary>
@@ -24,7 +35,7 @@ public abstract class WinUILocalizeExtensionBase : MarkupExtension
             "Argument1",
             typeof(object),
             typeof(WinUILocalizeExtensionBase),
-            new PropertyMetadata(null, OnArgumentChanged)
+            new PropertyMetadata(null, OnLocalizationInputChanged)
         );
 
     /// <summary>Identifies the third localization format argument.</summary>
@@ -33,7 +44,7 @@ public abstract class WinUILocalizeExtensionBase : MarkupExtension
             "Argument2",
             typeof(object),
             typeof(WinUILocalizeExtensionBase),
-            new PropertyMetadata(null, OnArgumentChanged)
+            new PropertyMetadata(null, OnLocalizationInputChanged)
         );
 
     /// <summary>
@@ -45,7 +56,7 @@ public abstract class WinUILocalizeExtensionBase : MarkupExtension
             "Arguments",
             typeof(IList<object>),
             typeof(WinUILocalizeExtensionBase),
-            new PropertyMetadata(null, OnArgumentChanged)
+            new PropertyMetadata(null, OnLocalizationInputChanged)
         );
 
     private string? token;
@@ -76,6 +87,20 @@ public abstract class WinUILocalizeExtensionBase : MarkupExtension
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
             token = value;
         }
+    }
+
+    /// <summary>Gets the localization token selected by a runtime binding.</summary>
+    public static string? GetKeyBinding(DependencyObject target)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        return target.GetValue(KeyBindingProperty) as string;
+    }
+
+    /// <summary>Sets the localization token selected by a runtime binding.</summary>
+    public static void SetKeyBinding(DependencyObject target, string? value)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        target.SetValue(KeyBindingProperty, value);
     }
 
     /// <summary>Gets the first localization format argument.</summary>
@@ -135,7 +160,10 @@ public abstract class WinUILocalizeExtensionBase : MarkupExtension
     }
 
     /// <inheritdoc />
-    protected override object ProvideValue() => WinUILocalizationMarker.Create(Token);
+    protected override object ProvideValue() =>
+        token is null
+            ? WinUILocalizationMarker.CreateDynamic()
+            : WinUILocalizationMarker.Create(token);
 
     internal static object?[] GetCurrentArguments(DependencyObject target)
     {
@@ -167,8 +195,8 @@ public abstract class WinUILocalizeExtensionBase : MarkupExtension
         };
     }
 
-    private static void OnArgumentChanged(
+    private static void OnLocalizationInputChanged(
         DependencyObject target,
         DependencyPropertyChangedEventArgs args
-    ) => WinUILocalizationHost.RefreshArguments(target);
+    ) => WinUILocalizationHost.RefreshInputs(target);
 }
