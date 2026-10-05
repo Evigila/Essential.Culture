@@ -20,10 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Essential.Culture\Essential.Culture.csproj" />
-    <ProjectReference Include="..\..\src\Essential.Culture.Avalonia\Essential.Culture.Avalonia.csproj" />
-    <ProjectReference Include="..\..\src\Essential.Culture.Wpf\Essential.Culture.Wpf.csproj" />
-    <ProjectReference Include="..\..\src\Essential.Culture.Generator\Essential.Culture.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\src\Essential.Culture\Essential.Culture\Essential.Culture.csproj" />
+    <ProjectReference Include="..\..\src\Essential.Culture\Essential.Culture.Avalonia\Essential.Culture.Avalonia.csproj" />
+    <ProjectReference Include="..\..\src\Essential.Culture\Essential.Culture.Wpf\Essential.Culture.Wpf.csproj" />
+    <ProjectReference Include="..\..\src\Essential.Culture\Essential.Culture.Generator\Essential.Culture.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <CompilerVisibleProperty Include="EssentialCultureXamlFramework" />
     <AdditionalFiles Include="Culture.json" />
     <None Update="Culture.json" CopyToOutputDirectory="PreserveNewest" />

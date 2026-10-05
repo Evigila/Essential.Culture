@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ArkheideSystem.Essential.Culture.Blazor</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageId>Arkheide.Essential.Culture.Blazor</PackageId>
+    <Description>Scoped localization and reactive text components for server-rendered Blazor applications.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="../Essential.Culture/Essential.Culture.csproj" />
+  </ItemGroup>
+</Project>

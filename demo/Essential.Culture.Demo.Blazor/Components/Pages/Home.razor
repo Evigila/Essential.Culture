@@ -1,0 +1,100 @@
+@page "/"
+@inherits LocalizedComponentBase
+
+<PageTitle>@Localization.Parse(TextKey.App_Title)</PageTitle>
+
+<main lang="@Localization.Culture">
+    <header>
+        <p class="eyebrow">Blazor · Interactive Server</p>
+        <h1>@Localization.Parse(TextKey.App_Title)</h1>
+        <p>@Localization.Parse(TextKey.Greeting, "Blazor")</p>
+        <p>@Localization.Parse(TextKey.Introduction)</p>
+    </header>
+
+    <section aria-labelledby="runtime-title">
+        <h2 id="runtime-title">@Localization.Parse(TextKey.Runtime_Title)</h2>
+        <p>@Localization.Parse(TextKey.Runtime_Description)</p>
+        <div class="actions">
+            <button type="button" @onclick="UseEnglish">English · en-US</button>
+            <button type="button" @onclick="UseChinese">中文 · zh-CN</button>
+            <button type="button" @onclick="UseChineseWithBrazilianFormats">
+                @Localization.Parse(TextKey.Action_SeparateFormats)
+            </button>
+        </div>
+        <dl class="selection">
+            <div>
+                <dt>@Localization.Parse(TextKey.Label_UICulture)</dt>
+                <dd><code>@Localization.Culture</code></dd>
+            </div>
+            <div>
+                <dt>@Localization.Parse(TextKey.Label_FormatCulture)</dt>
+                <dd><code>@Localization.FormatCulture.Name</code></dd>
+            </div>
+        </dl>
+        <p class="notice">@Localization.Parse(TextKey.Runtime_Notice)</p>
+    </section>
+
+    <section aria-labelledby="format-title">
+        <h2 id="format-title">@Localization.Parse(TextKey.Format_Title)</h2>
+        <p>@Localization.Parse(TextKey.Format_Description)</p>
+        <p class="sample">
+            <LocalizedText Key="@TextKey.Format_Sample" CatalogId="Demo" Arguments="@formatArguments" />
+        </p>
+        <p>
+            <LocalizedText Key="@TextKey.Component_Sample" Arguments="@componentArguments" Fallback="Localized text is unavailable." />
+        </p>
+    </section>
+
+    <section aria-labelledby="cookie-title">
+        <h2 id="cookie-title">@Localization.Parse(TextKey.Cookie_Title)</h2>
+        <p>@Localization.Parse(TextKey.Cookie_Description)</p>
+        <form method="post" action="/culture" data-enhance="false">
+            <AntiforgeryToken />
+            <input type="hidden" name="returnUrl" value="/" />
+            <div class="fields">
+                <label>
+                    <span>@Localization.Parse(TextKey.Label_UICulture)</span>
+                    <select name="uiCulture">
+                        @foreach (var culture in Localization.AvailableCultures)
+                        {
+                            <option value="@culture" selected="@(culture == Localization.Culture)">@CultureLabel(culture)</option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    <span>@Localization.Parse(TextKey.Label_FormatCulture)</span>
+                    <select name="formatCulture">
+                        @foreach (var culture in allowedFormats)
+                        {
+                            <option value="@culture" selected="@(culture == Localization.FormatCulture.Name)">@CultureLabel(culture)</option>
+                        }
+                    </select>
+                </label>
+            </div>
+            <button type="submit">@Localization.Parse(TextKey.Action_SaveAndReload)</button>
+        </form>
+        <p class="notice">@Localization.Parse(TextKey.Cookie_Notice)</p>
+    </section>
+
+    <footer>@Localization.Parse(TextKey.Isolation_Notice)</footer>
+</main>
+
+@code {
+    private static readonly string[] allowedFormats = ["en-US", "zh-CN", "pt-BR"];
+    private readonly object?[] formatArguments = [12345.67m, new DateTime(2026, 10, 4)];
+    private readonly object?[] componentArguments = ["LocalizedText"];
+
+    private void UseEnglish() => Localization.SetCulture("en-US");
+
+    private void UseChinese() => Localization.SetCulture("zh-CN");
+
+    private void UseChineseWithBrazilianFormats() => Localization.SetCulture("zh-CN", "pt-BR");
+
+    private static string CultureLabel(string culture) => culture switch
+    {
+        "en-US" => "English (United States) · en-US",
+        "zh-CN" => "中文（中国）· zh-CN",
+        "pt-BR" => "Português (Brasil) · pt-BR",
+        _ => culture
+    };
+}

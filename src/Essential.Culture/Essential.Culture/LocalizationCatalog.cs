@@ -1,31 +1,49 @@
 using System.Collections.Frozen;
-using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
 namespace ArkheideSystem.Essential.Culture;
 
-/// <summary>Owns the process-wide Culture.json catalog and its dynamic culture state.</summary>
-internal sealed class LocalizationRuntime
+/// <summary>
+/// Owns validated immutable translations. Catalogs can be shared while each localization context
+/// retains its own selected culture.
+/// </summary>
+public sealed class LocalizationCatalog
 {
-    private static class SharedHolder
+    private readonly Catalog catalog;
+    private readonly Lock cacheGate = new();
+    private readonly Dictionary<string, CatalogSelection> selections =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private LocalizationCatalog(Catalog catalog) => this.catalog = catalog;
+
+    /// <summary>Gets the normalized cultures declared by every key in this catalog.</summary>
+    public IReadOnlyList<string> AvailableCultures => catalog.Cultures;
+
+    /// <summary>Gets the configured fallback translation culture.</summary>
+    public string FallbackCulture => catalog.Fallback;
+
+    /// <summary>Parses and validates a JSON catalog without reading a file.</summary>
+    public static LocalizationCatalog FromJson(string json, string fallbackCulture = "en-US")
     {
-        internal static readonly LocalizationRuntime Instance = new(
-                Path.Combine(AppContext.BaseDirectory, "Culture.json"),
-                "en-US",
-                "en-US"
-            );
+        ArgumentNullException.ThrowIfNull(json);
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+        return Load(stream, fallbackCulture);
     }
 
-    private readonly Lock stateGate = new();
-    private readonly Catalog catalog;
-    private readonly Dictionary<string, RuntimeState> stateCache =
-        new(StringComparer.OrdinalIgnoreCase);
-    private RuntimeState state;
+    /// <summary>
+    /// Reads and validates a catalog from the stream's current position. The caller owns the stream;
+    /// this method does not close it, including when validation fails.
+    /// </summary>
+    public static LocalizationCatalog Load(Stream stream, string fallbackCulture = "en-US")
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        var fallback = KeyValidation.NormalizeCulture(fallbackCulture, nameof(fallbackCulture));
+        return new LocalizationCatalog(ReadDocument(stream, "<stream>", fallback));
+    }
 
-    internal static LocalizationRuntime Shared => SharedHolder.Instance;
-
-    internal LocalizationRuntime(string path, string current, string fallback = "en-US")
+    /// <summary>Reads and validates a catalog from an explicitly supplied file path.</summary>
+    public static LocalizationCatalog FromFile(string path, string fallbackCulture = "en-US")
     {
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -38,251 +56,53 @@ internal sealed class LocalizationRuntime
             throw new FileNotFoundException($"File '{sourcePath}' does not exist.", sourcePath);
         }
 
-        var normalizedFallback = KeyValidation.NormalizeCulture(fallback, nameof(fallback));
-        catalog = LoadDocument(sourcePath, normalizedFallback);
-        state = CreateState(
-            catalog,
-            KeyValidation.NormalizeCulture(current, nameof(current))
-        );
-        CacheStateIfBounded(state);
+        var fallback = KeyValidation.NormalizeCulture(fallbackCulture, nameof(fallbackCulture));
+        return LoadValidatedFile(sourcePath, fallback);
     }
 
-    internal string Culture => Volatile.Read(ref state).Culture;
-
-    internal IReadOnlyList<string> AvailableCultures => catalog.Cultures;
-
-    internal event EventHandler? Changed;
-
-    internal void SetCulture(string culture)
+    internal static LocalizationCatalog LoadValidatedFile(string path, string fallback)
     {
-        var normalized = KeyValidation.NormalizeCulture(culture, nameof(culture));
-        lock (stateGate)
+        try
         {
-            if (string.Equals(state.Culture, normalized, StringComparison.Ordinal))
+            using var stream = File.OpenRead(path);
+            return new LocalizationCatalog(ReadDocument(stream, path, fallback));
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            throw Invalid(path, "could not be read", error);
+        }
+    }
+
+    internal CatalogSelection Select(string culture)
+    {
+        lock (cacheGate)
+        {
+            if (selections.TryGetValue(culture, out var selected))
             {
-                return;
+                return selected;
             }
 
-            if (!stateCache.TryGetValue(normalized, out var next))
+            var cultureChain = GetCultureChain(culture, catalog.Fallback);
+            var rawValues = new Dictionary<string, Translation>(catalog.Entries.Count, StringComparer.Ordinal);
+            var tokenValues = new Dictionary<string, Translation>(catalog.Entries.Count, StringComparer.Ordinal);
+            foreach (var (key, entry) in catalog.Entries)
             {
-                next = CreateState(catalog, normalized);
-                CacheStateIfBounded(next);
+                var translation = SelectTranslation(entry.Translations, cultureChain);
+                rawValues.Add(key, translation);
+                tokenValues.Add(entry.Token, translation);
             }
 
-            Volatile.Write(ref state, next);
-        }
-
-        Changed?.Invoke(this, EventArgs.Empty);
-    }
-
-    internal bool Contains(string token) => TryResolve(Volatile.Read(ref state), token, out _);
-
-    internal bool TryParse(string token, out string value)
-    {
-        if (TryResolve(Volatile.Read(ref state), token, out var resolved))
-        {
-            value = resolved.Text;
-            return true;
-        }
-
-        value = string.Empty;
-        return false;
-    }
-
-    internal bool TryParse(string token, object?[] arguments, out string value)
-    {
-        ArgumentNullException.ThrowIfNull(arguments);
-        var snapshot = Volatile.Read(ref state);
-        if (!TryResolve(snapshot, token, out var resolved))
-        {
-            value = string.Empty;
-            return false;
-        }
-
-        value = arguments.Length == 0
-            ? resolved.Text
-            : string.Format(snapshot.FormatCulture, resolved.Format, arguments);
-        return true;
-    }
-
-    internal bool TryParse<TArg0>(string token, TArg0 argument0, out string value)
-    {
-        var snapshot = Volatile.Read(ref state);
-        if (!TryResolve(snapshot, token, out var resolved))
-        {
-            value = string.Empty;
-            return false;
-        }
-
-        value = string.Format(snapshot.FormatCulture, resolved.Format, argument0);
-        return true;
-    }
-
-    internal bool TryParse<TArg0, TArg1>(
-        string token,
-        TArg0 argument0,
-        TArg1 argument1,
-        out string value
-    )
-    {
-        var snapshot = Volatile.Read(ref state);
-        if (!TryResolve(snapshot, token, out var resolved))
-        {
-            value = string.Empty;
-            return false;
-        }
-
-        value = string.Format(snapshot.FormatCulture, resolved.Format, argument0, argument1);
-        return true;
-    }
-
-    internal bool TryParse<TArg0, TArg1, TArg2>(
-        string token,
-        TArg0 argument0,
-        TArg1 argument1,
-        TArg2 argument2,
-        out string value
-    )
-    {
-        var snapshot = Volatile.Read(ref state);
-        if (!TryResolve(snapshot, token, out var resolved))
-        {
-            value = string.Empty;
-            return false;
-        }
-
-        value = string.Format(
-            snapshot.FormatCulture,
-            resolved.Format,
-            argument0,
-            argument1,
-            argument2
-        );
-        return true;
-    }
-
-    internal string Parse(string token)
-    {
-        var resolved = ResolveOrFallback(Volatile.Read(ref state), token);
-        return resolved?.Text ?? token;
-    }
-
-    internal string Parse(string token, params object?[] arguments)
-    {
-        ArgumentNullException.ThrowIfNull(arguments);
-        var snapshot = Volatile.Read(ref state);
-        var resolved = ResolveOrFallback(snapshot, token);
-        if (resolved is null)
-        {
-            return token;
-        }
-
-        return arguments.Length == 0
-            ? resolved.Text
-            : string.Format(snapshot.FormatCulture, resolved.Format, arguments);
-    }
-
-    internal string Parse<TArg0>(string token, TArg0 argument0)
-    {
-        var snapshot = Volatile.Read(ref state);
-        var resolved = ResolveOrFallback(snapshot, token);
-        return resolved is null
-            ? token
-            : string.Format(snapshot.FormatCulture, resolved.Format, argument0);
-    }
-
-    internal string Parse<TArg0, TArg1>(string token, TArg0 argument0, TArg1 argument1)
-    {
-        var snapshot = Volatile.Read(ref state);
-        var resolved = ResolveOrFallback(snapshot, token);
-        return resolved is null
-            ? token
-            : string.Format(snapshot.FormatCulture, resolved.Format, argument0, argument1);
-    }
-
-    internal string Parse<TArg0, TArg1, TArg2>(
-        string token,
-        TArg0 argument0,
-        TArg1 argument1,
-        TArg2 argument2
-    )
-    {
-        var snapshot = Volatile.Read(ref state);
-        var resolved = ResolveOrFallback(snapshot, token);
-        return resolved is null
-            ? token
-            : string.Format(
-                snapshot.FormatCulture,
-                resolved.Format,
-                argument0,
-                argument1,
-                argument2
+            selected = new CatalogSelection(
+                rawValues.ToFrozenDictionary(StringComparer.Ordinal),
+                tokenValues.ToFrozenDictionary(StringComparer.Ordinal)
             );
-    }
-
-    private static Translation? ResolveOrFallback(RuntimeState snapshot, string token)
-    {
-        if (TryResolve(snapshot, token, out var resolved))
-        {
-            return resolved;
-        }
-
-        if (!KeyToken.TryGetKey(token, out _))
-        {
-            throw new ArgumentException("Value invalid.", nameof(token));
-        }
-
-        return null;
-    }
-
-    private static bool TryResolve(
-        RuntimeState snapshot,
-        string? token,
-        out Translation translation
-    )
-    {
-        if (token is not null)
-        {
-            // Generated tokens take this branch and are looked up verbatim: no substring and no regex.
-            var values = token.StartsWith(KeyToken.Prefix, StringComparison.Ordinal)
-                ? snapshot.TokenValues
-                : snapshot.RawValues;
-            if (values.TryGetValue(token, out translation!))
+            // Only declared cultures form the shared cache. Arbitrary/custom requests stay bounded.
+            if (catalog.DeclaredCultures.Contains(culture))
             {
-                return true;
+                selections.Add(culture, selected);
             }
-        }
 
-        translation = null!;
-        return false;
-    }
-
-    private static RuntimeState CreateState(Catalog catalog, string culture)
-    {
-        var cultureChain = GetCultureChain(culture, catalog.Fallback);
-        var rawValues = new Dictionary<string, Translation>(catalog.Entries.Count, StringComparer.Ordinal);
-        var tokenValues = new Dictionary<string, Translation>(catalog.Entries.Count, StringComparer.Ordinal);
-        foreach (var (key, entry) in catalog.Entries)
-        {
-            var selected = SelectTranslation(entry.Translations, cultureChain);
-            rawValues.Add(key, selected);
-            tokenValues.Add(entry.Token, selected);
-        }
-
-        return new RuntimeState(
-            culture,
-            GetFormatCulture(culture),
-            rawValues.ToFrozenDictionary(StringComparer.Ordinal),
-            tokenValues.ToFrozenDictionary(StringComparer.Ordinal)
-        );
-    }
-
-    private void CacheStateIfBounded(RuntimeState snapshot)
-    {
-        // Declared cultures form a naturally bounded cache and cover normal UI toggles.
-        if (catalog.DeclaredCultures.Contains(snapshot.Culture))
-        {
-            stateCache.TryAdd(snapshot.Culture, snapshot);
+            return selected;
         }
     }
 
@@ -330,11 +150,10 @@ internal sealed class LocalizationRuntime
         }
     }
 
-    private static Catalog LoadDocument(string path, string fallback)
+    private static Catalog ReadDocument(Stream stream, string path, string fallback)
     {
         try
         {
-            using var stream = File.OpenRead(path);
             using var document = JsonDocument.Parse(
                 stream,
                 new JsonDocumentOptions
@@ -562,21 +381,6 @@ internal sealed class LocalizationRuntime
         return [.. indexes];
     }
 
-    private static CultureInfo GetFormatCulture(string culture)
-    {
-        try
-        {
-            var formatCulture = CultureInfo.GetCultureInfo(culture);
-            // Some syntactically valid private-use tags produce a CultureInfo without usable data.
-            _ = formatCulture.NumberFormat.NumberDecimalSeparator;
-            return formatCulture;
-        }
-        catch (Exception error) when (error is CultureNotFoundException or NullReferenceException)
-        {
-            return CultureInfo.InvariantCulture;
-        }
-    }
-
     private static InvalidDataException Invalid(
         string path,
         string message,
@@ -601,11 +405,9 @@ internal sealed class LocalizationRuntime
         int[] PlaceholderIndexes
     );
 
-    private sealed record Translation(string Text, CompositeFormat Format);
+    internal sealed record Translation(string Text, CompositeFormat Format);
 
-    private sealed record RuntimeState(
-        string Culture,
-        CultureInfo FormatCulture,
+    internal sealed record CatalogSelection(
         FrozenDictionary<string, Translation> RawValues,
         FrozenDictionary<string, Translation> TokenValues
     );

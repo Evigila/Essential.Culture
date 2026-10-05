@@ -3,4 +3,5 @@
   <Project Path="Essential.Culture.Demo.Wpf/Essential.Culture.Demo.Wpf.csproj" />
   <Project Path="Essential.Culture.Demo.Avalonia/Essential.Culture.Demo.Avalonia.csproj" />
   <Project Path="Essential.Culture.Demo.WinUI3/Essential.Culture.Demo.WinUI3.csproj" />
+  <Project Path="Essential.Culture.Demo.Blazor/Essential.Culture.Demo.Blazor.csproj" />
 </Solution>

@@ -15,7 +15,7 @@
     <PackageReference Include="Avalonia.Desktop" Version="12.1.0" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
     <PackageReference Include="Arkheide.Essential.Culture.Avalonia" Version="$(VersionPrefix)" Condition="'$(UseLocalCulture)' != 'true'" />
-    <ProjectReference Include="..\..\src\Essential.Culture.Avalonia\Essential.Culture.Avalonia.csproj" Condition="'$(UseLocalCulture)' == 'true'" />
-    <ProjectReference Include="..\..\src\Essential.Culture.Generator\Essential.Culture.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" Condition="'$(UseLocalCulture)' == 'true'" />
+    <ProjectReference Include="..\..\src\Essential.Culture\Essential.Culture.Avalonia\Essential.Culture.Avalonia.csproj" Condition="'$(UseLocalCulture)' == 'true'" />
+    <ProjectReference Include="..\..\src\Essential.Culture\Essential.Culture.Generator\Essential.Culture.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" Condition="'$(UseLocalCulture)' == 'true'" />
   </ItemGroup>
 </Project>

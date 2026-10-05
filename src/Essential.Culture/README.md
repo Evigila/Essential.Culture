@@ -175,12 +175,12 @@ dotnet add package Arkheide.Essential.Culture.WinUI
 ## Documentation and examples
 
 - [Complete usage guide](docs/usage-guide.md)
-- [Demo overview](demo/README.md)
-- [Console Demo](demo/Essential.Culture.Demo.Console/README.md)
-- [WPF Demo](demo/Essential.Culture.Demo.Wpf/README.md)
-- [Avalonia Demo](demo/Essential.Culture.Demo.Avalonia/README.md)
-- [WinUI 3 Demo](demo/Essential.Culture.Demo.WinUI3/README.md)
+- [Demo overview](../../demo/README.md)
+- [Console Demo](../../demo/Essential.Culture.Demo.Console/README.md)
+- [WPF Demo](../../demo/Essential.Culture.Demo.Wpf/README.md)
+- [Avalonia Demo](../../demo/Essential.Culture.Demo.Avalonia/README.md)
+- [WinUI 3 Demo](../../demo/Essential.Culture.Demo.WinUI3/README.md)
 
 ## License
 
-Licensed under the [MIT License](LICENSE.txt).
+Licensed under the [MIT License](../../LICENSE.txt).

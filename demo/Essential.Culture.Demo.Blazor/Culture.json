@@ -1,0 +1,74 @@
+{
+  "App_Title": {
+    "en-US": "Culture in a Blazor circuit",
+    "zh-CN": "Blazor circuit 中的语言与格式"
+  },
+  "Greeting": {
+    "en-US": "Hello, {0}!",
+    "zh-CN": "你好，{0}！"
+  },
+  "Introduction": {
+    "en-US": "This page uses an embedded bilingual catalog and a scoped localization service.",
+    "zh-CN": "本页使用独立嵌入的双语目录，以及属于当前作用域的本地化服务。"
+  },
+  "Runtime_Title": {
+    "en-US": "Change the current circuit",
+    "zh-CN": "切换当前 circuit"
+  },
+  "Runtime_Description": {
+    "en-US": "These buttons update the active page immediately without a new HTTP request.",
+    "zh-CN": "这些按钮会立即更新当前页面，无需新的 HTTP 请求。"
+  },
+  "Action_SeparateFormats": {
+    "en-US": "Chinese text + Brazilian formats",
+    "zh-CN": "中文文案 + 巴西格式"
+  },
+  "Label_UICulture": {
+    "en-US": "Text language",
+    "zh-CN": "文案语言"
+  },
+  "Label_FormatCulture": {
+    "en-US": "Number and date format",
+    "zh-CN": "数字与日期格式"
+  },
+  "Runtime_Notice": {
+    "en-US": "Circuit changes do not write a cookie. Reloading restores the HTTP request's selected culture.",
+    "zh-CN": "circuit 内的切换不会写入 Cookie。重新加载时会恢复 HTTP 请求所选择的语言和格式。"
+  },
+  "Format_Title": {
+    "en-US": "Composite formatting",
+    "zh-CN": "复合格式化"
+  },
+  "Format_Description": {
+    "en-US": "The values below are fixed demo data. Their surrounding text follows the UI culture; their formatting follows the format culture.",
+    "zh-CN": "下列数值是固定演示数据。周围的文案使用界面语言，数值和日期使用格式文化。"
+  },
+  "Format_Sample": {
+    "en-US": "Amount: {0:N2} · Date: {1:D}",
+    "zh-CN": "金额：{0:N2} · 日期：{1:D}"
+  },
+  "Component_Sample": {
+    "en-US": "This sentence is rendered by the {0} component and refreshes with the circuit.",
+    "zh-CN": "这句话由 {0} 组件渲染，并随当前 circuit 的语言变化而刷新。"
+  },
+  "Cookie_Title": {
+    "en-US": "Save a cookie and reload",
+    "zh-CN": "保存 Cookie 并重新加载"
+  },
+  "Cookie_Description": {
+    "en-US": "Submit this ordinary HTTP form to save both selections in the standard request-localization cookie. A full reload creates a new circuit.",
+    "zh-CN": "提交这个普通 HTTP 表单，将两项选择保存到标准请求本地化 Cookie。完整重载会建立新的 circuit。"
+  },
+  "Action_SaveAndReload": {
+    "en-US": "Save selections and reload",
+    "zh-CN": "保存选择并重新加载"
+  },
+  "Cookie_Notice": {
+    "en-US": "The endpoint accepts only the listed cultures, validates an antiforgery token, and redirects only to a local URL. The initial document language follows the request.",
+    "zh-CN": "端点只接受列表中的文化名称，验证抗伪造令牌，并且只允许跳转到本地地址。初始文档语言跟随请求选择。"
+  },
+  "Isolation_Notice": {
+    "en-US": "Each circuit has its own live selection. Cookies are shared by tabs in the same browser profile, but an existing circuit is not changed by another tab's cookie submission.",
+    "zh-CN": "每个 circuit 都有自己的实时选择。同一浏览器配置中的标签页共享 Cookie，但其他标签页提交 Cookie 不会改变已经存在的 circuit。"
+  }
+}

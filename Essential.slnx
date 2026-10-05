@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/Essential.Culture/">
+    <Project Path="src/Essential.Culture/Essential.Culture/Essential.Culture.csproj" />
+    <Project Path="src/Essential.Culture/Essential.Culture.Avalonia/Essential.Culture.Avalonia.csproj" />
+    <Project Path="src/Essential.Culture/Essential.Culture.Wpf/Essential.Culture.Wpf.csproj" />
+    <Project Path="src/Essential.Culture/Essential.Culture.WinUI/Essential.Culture.WinUI.csproj" />
+    <Project Path="src/Essential.Culture/Essential.Culture.Generator/Essential.Culture.Generator.csproj" />
+    <Project Path="src/Essential.Culture/Essential.Culture.Blazor/Essential.Culture.Blazor.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="tests/Essential.Culture.Generator.Test/Essential.Culture.Generator.Test.csproj" />
+    <Project Path="tests/Essential.Culture.Test/Essential.Culture.Test.csproj" />
+    <Project Path="tests/Essential.Culture.WinUI.Test/Essential.Culture.WinUI.Test.csproj" />
+    <Project Path="tests/Essential.Culture.Blazor.Test/Essential.Culture.Blazor.Test.csproj" />
+  </Folder>
+  <Folder Name="/Solutions/">
+    <File Path="src/Essential.Culture/Essential.Culture.slnx" />
+    <File Path="demo/Essential.Culture.Demo.slnx" />
+  </Folder>
+</Solution>
