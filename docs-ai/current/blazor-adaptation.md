@@ -8,13 +8,13 @@ The first adapter version targets SSR and Interactive Server. Browser WebAssembl
 - [Blazor registration](../../src/Essential.Culture/Essential.Culture.Blazor/LocalizationServiceCollectionExtensions.cs) stores completed configuration and catalogs once, then registers the Blazor [ILocalizationService](../../src/Essential.Culture/Essential.Culture.Blazor/ILocalizationService.cs) as scoped.
 - [LocalizedComponentBase](../../src/Essential.Culture/Essential.Culture.Blazor/LocalizedComponentBase.cs) subscribes to that scope's Changed event, schedules rendering through InvokeAsync, and unsubscribes on disposal. Derived initialization overrides must call the base implementation.
 - [LocalizedText](../../src/Essential.Culture/Essential.Culture.Blazor/LocalizedText.cs) accepts Key, optional CatalogId, Arguments, and literal Fallback. Its output is encoded text.
-- [The independent demo](../../demo/Essential.Culture.Demo.Blazor/Essential.Culture.Demo.Blazor.csproj) defaults to the adapter and generator NuGet packages. Explicit -p:UseLocalCulture=true selects source projects for development. It uses the .NET 10 Web SDK's ASP.NET Core framework reference and adds no new fonts, scripts or icon dependencies. See [NuGet release and integration](nuget-release-integration.md).
+- [The independent demo](../../demo/Gallery.Essential.Culture.Blazor/Gallery.Essential.Culture.Blazor.csproj) defaults to the adapter and generator NuGet packages. Explicit -p:UseLocalCulture=true selects source projects for development. It uses the .NET 10 Web SDK's ASP.NET Core framework reference and adds no new fonts, scripts or icon dependencies. See [NuGet release and integration](nuget-release-integration.md).
 
 Application and feature text belongs in the host's catalogs. Use separate catalog identities for separate text owners; do not add a host's business vocabulary to the adapter. The demo registers its own catalog as Demo.
 
 ## Register catalogs at startup
 
-The [demo Program](../../demo/Essential.Culture.Demo.Blazor/Program.cs) reads its own embedded Culture.json using the logical resource name Demo.Texts.json:
+The [demo Program](../../demo/Gallery.Essential.Culture.Blazor/Program.cs) reads its own embedded Culture.json using the logical resource name Demo.Texts.json:
 
     using var stream = typeof(Program).Assembly
         .GetManifestResourceStream("Demo.Texts.json")
@@ -35,7 +35,7 @@ A host can instead use InitializeWith(Func<IServiceProvider, LocalizationSelecti
 
 ## Render and switch within a circuit
 
-The [Home page](../../demo/Essential.Culture.Demo.Blazor/Components/Pages/Home.razor) inherits LocalizedComponentBase and renders both direct Parse results and LocalizedText:
+The [Home page](../../demo/Gallery.Essential.Culture.Blazor/Components/Pages/Home.razor) inherits LocalizedComponentBase and renders both direct Parse results and LocalizedText:
 
     @using TextKey = ArkheideSystem.Essential.Culture.Demo.Blazor.Texts.Key
     @inherits LocalizedComponentBase
@@ -67,7 +67,7 @@ The demo configures standard RequestLocalizationOptions before endpoint executio
 - Default: en-US.
 - Providers, in order: CookieRequestCultureProvider and AcceptLanguageHeaderRequestCultureProvider. Query-string culture selection is not enabled.
 
-The initial static [App document](../../demo/Essential.Culture.Demo.Blazor/Components/App.razor) sets html lang from the request's scoped service before the first interactive render. Home also sets main lang from the live circuit selection. The outer static html attribute is refreshed on a full HTTP reload; circuit-only switches update main and the visible text without rewriting the outer static document.
+The initial static [App document](../../demo/Gallery.Essential.Culture.Blazor/Components/App.razor) sets html lang from the request's scoped service before the first interactive render. Home also sets main lang from the live circuit selection. The outer static html attribute is refreshed on a full HTTP reload; circuit-only switches update main and the visible text without rewriting the outer static document.
 
 The ordinary POST form at /culture disables enhanced navigation so the redirect performs a full reload and starts a new circuit. It includes AntiforgeryToken, uiCulture, formatCulture, and a local returnUrl. The endpoint:
 
@@ -83,11 +83,11 @@ Cookie persistence is host behavior. The adapter does not expose HttpContext or 
 
 ## Catalog packaging and running
 
-The demo's [Culture.json](../../demo/Essential.Culture.Demo.Blazor/Culture.json) is independent of demo/Culture.json used by desktop examples. Its project removes the file from Content/None and embeds it as Demo.Texts.json. EssentialCultureAutoInclude and EssentialCultureAutoCreate are false. EssentialCultureGeneratorEnabled is true and EssentialCultureXamlFramework is none, enabling token generation without automatic file creation or copying. No external Culture.json is copied or published, and no shared desktop catalog is linked into the web demo.
+The demo's [Culture.json](../../demo/Gallery.Essential.Culture.Blazor/Culture.json) is independent of demo/Culture.json used by desktop examples. Its project removes the file from Content/None and embeds it as Demo.Texts.json. EssentialCultureAutoInclude and EssentialCultureAutoCreate are false. EssentialCultureGeneratorEnabled is true and EssentialCultureXamlFramework is none, enabling token generation without automatic file creation or copying. No external Culture.json is copied or published, and no shared desktop catalog is linked into the web demo.
 
 From the repository root with the .NET 10 SDK installed:
 
-    dotnet run --project demo/Essential.Culture.Demo.Blazor
+    dotnet run --project demo/Gallery.Essential.Culture.Blazor
 
 The http launch profile uses http://localhost:5196 and does not open a browser automatically. Stop the host with Ctrl+C. This command runs only the web demo; the full demo solution also contains platform-specific desktop examples.
 

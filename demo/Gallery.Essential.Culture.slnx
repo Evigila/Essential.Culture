@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Gallery.Essential.Culture/Gallery.Essential.Culture.csproj" />
+  <Project Path="Gallery.Essential.Culture.Wpf/Gallery.Essential.Culture.Wpf.csproj" />
+  <Project Path="Gallery.Essential.Culture.Avalonia/Gallery.Essential.Culture.Avalonia.csproj" />
+  <Project Path="Gallery.Essential.Culture.WinUI/Gallery.Essential.Culture.WinUI.csproj" />
+  <Project Path="Gallery.Essential.Culture.Blazor/Gallery.Essential.Culture.Blazor.csproj" />
+</Solution>

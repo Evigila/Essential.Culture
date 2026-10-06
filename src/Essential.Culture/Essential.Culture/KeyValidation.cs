@@ -7,6 +7,10 @@ internal static partial class KeyValidation
 {
     private static readonly HashSet<string> CSharpKeywords =
     [
+        "__arglist",
+        "__makeref",
+        "__reftype",
+        "__refvalue",
         "abstract",
         "as",
         "base",
@@ -87,7 +91,9 @@ internal static partial class KeyValidation
     ];
 
     public static bool IsValidKey(string key) =>
-        KeyPattern().IsMatch(key) && !CSharpKeywords.Contains(key);
+        KeyPattern().IsMatch(key)
+        && !CSharpKeywords.Contains(key)
+        && key is not ("Key" or "CultureKey" or "value__");
 
     public static void ValidateKey(string key, string parameterName)
     {
@@ -149,6 +155,6 @@ internal static partial class KeyValidation
         return string.Join('-', subtags);
     }
 
-    [GeneratedRegex("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"\A[A-Za-z_][A-Za-z0-9_]*\z", RegexOptions.CultureInvariant)]
     private static partial Regex KeyPattern();
 }

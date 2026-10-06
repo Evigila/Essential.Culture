@@ -1,8 +1,44 @@
-# Culture local release verification on 2026-10-05
+# Culture local release verification
 
-The coordinating implementation task reports a successful full publish-helper.bat -Mode Prepare for Essential.Culture 1.3.0. This document records local preparation and the observed release configuration, not a public NuGet release.
+## Latest preparation: 2026-10-06 repository metadata and dependent release
 
-## Verification
+Essential's preceding full preparation passed 106 tests: Core 61, Generator 20, Blazor 21 and WinUI 4. All five Galleries compiled with zero warnings/errors and all six fresh 1.3.0 packages passed identity/dependency/asset verification. The existing isolated Blazor-only consumer verifies Core/Generator transitively with no direct Generator reference.
+
+This round subsequently changed RepositoryUrl/PackageProjectUrl to Evigila/Essential.Culture, repacked all six libraries and passed Verify-PackageSet. All six nuspec files were checked and use the current Essential.Culture URL. These metadata-only changes did not require rerunning functional tests; the 106-test result belongs to the preceding complete preparation.
+
+Dependent Flourish's complete staged preparation completed with exit code 0 and zero build warnings/errors: Core 367, Blazor 373/373, bridge 12, Gallery 7,234 including 124 real-event language-switch/state-retention checks, Node 66, CSS bundle 21 and SDK integration 194, catalog 21,217 and four isolated consumers totaling 129 checks. Exactly six fresh Flourish Core/Blazor 1.1.0 packages passed verification; WPF was excluded. Evidence is Flourish/artifacts/culture-final-release.log and Flourish/artifacts/package-consumers/01e52f8b29ce48f89c139dfc26a2bfbb. Its initial consumer HTTP 500 was corrected by adding [FromServices] to a Minimal API fixture; no production behavior change was needed.
+
+Flourish Gallery's bridge package migration is complete: its sole bridge PackageReference uses VersionPrefix, and Generator is obtained transitively. Preparation now packs/verifies the targeted six-library umbrella graph before restoring the full Blazor solution through temporary candidate-source mapping and a fresh cache, asserting Gallery package adoption, running build/tests/checks and checking four package consumers. EssentialPackageDirectory explicitly supplies local Essential candidates; no implicit sibling feed or source fallback is used.
+
+The user supplied NuGet profile Evigila and is configuring Flourish's Trusted Publishing policy/secret. Account-policy permissions, coverage for the new Blazor ID and configuration completion remain unconfirmed. A profile name or historical 1.2.0 Trusted Publishing success does not confirm present authorization. Local preparation did not create a new commit, tag, push or public NuGet release. The user has authorized Trusted Publishing execution; a new commit still awaits the user's answer under AGENTS.md. Public indexing and a clean public-source consumer remain release acceptance steps.
+
+Manual acceptance remains user-operated without Computer Use: check two independent Blazor browser sessions, UI versus formatting culture, cookie reload persistence/invalid culture handling, desktop demo language refresh and generated keys. In Flourish, use the original Gallery start.bat and check icons/styles, same-page H1/H2/body/sample/validation translation and input/selection retention in all three languages. Public-source acceptance follows publication and is not established by local candidates.
+
+## Historical verification snapshots from 2026-10-05 and earlier 2026-10-06 audit
+
+The following results and configuration observations retain their dated scope. Earlier current/latest wording, 89-test counts, package scopes and pending requests describe those runs; the latest section above and active release guide supersede them.
+
+The current preparation task reran the full publish-helper.bat -Mode Prepare for Essential.Culture 1.3.0 on the RC_Auditoria checkout and completed with exit code 0, including the new isolated Blazor-only NuGet consumer. This document distinguishes the current local run from earlier coordinating verification and external configuration observations. No public NuGet release was performed.
+
+## Previous verification
+
+- All 89 automated tests passed: Core 53, Generator 11, Blazor 21 and WinUI 4, with no skipped tests.
+- All five demos compiled; the solution and demo builds reported zero warnings and errors.
+- All six 1.3.0 packages passed identity, version, dependency and required-asset inspection and are available at C:/Users/RC_Auditoria/source/Repos/Essential/artifacts/packages.
+- The Blazor-only consumer restored solely from that local package directory into a new isolated package cache. Its only direct PackageReference is Arkheide.Essential.Culture.Blazor; the restore graph contains Core and Generator 1.3.0 transitively.
+- Generated Key members compiled without a direct Generator reference. The packaged consumer ran checks for Core catalog lookup, independent scoped languages, explicit formatting culture and encoded LocalizedText output.
+- The final full Prepare included that consumer gate and completed successfully. Its retained output is artifacts/package-consumers/blazor-d9ebe1b4f154492b9bb39e99b55b0069; subsequent runs use a new directory and cache.
+- Runtime/platform APIs and version 1.3.0 were unchanged. The edits add the package-consumer fixture, its verification script, the Prepare gate and this task's documentation.
+
+The consumer fixture lives under tests/package-consumers/Tests.Essential.Culture.Blazor.PackageConsumer. Run scripts/Verify-BlazorPackageConsumer.ps1 to repeat only the packaged consumption check after preparing the package set. It builds and runs a local consumer; it is not an inspection-only script or a public-source availability test.
+
+## Project naming verification on 2026-10-05
+
+Four regression projects now use Tests.<target>; five runnable examples use Gallery.<target>, and the isolated consumer uses Tests.Essential.Culture.Blazor.PackageConsumer. The Gallery solution is demo/Gallery.Essential.Culture.slnx. Renamed projects explicitly retain their previous assembly identities and namespaces so XAML assembly references, internal test access and generator configuration do not change. The six library projects and six 1.3.0 NuGet identities are unchanged.
+
+The full scripts/Test-Release.ps1 rerun completed with exit code 0: 89 tests passed, all five renamed Galleries compiled with warnings as errors, all six packages passed inspection, and the independent Blazor-only consumer passed at artifacts/package-consumers/blazor-206e03a49b9c41e680bbbb21f1de30a4. Static path validation covered 16 maintained project files, 22 ProjectReference paths and three solutions. No public release, Git commit, tag or push occurred.
+
+## Historical coordinating verification
 
 - All 89 automated tests passed.
 - All five demo projects compiled.
@@ -13,7 +49,7 @@ The coordinating implementation task reports a successful full publish-helper.ba
 
 Use [NuGet release and integration](nuget-release-integration.md) for the six package IDs, module version ownership, helper parameters and user-confirmed release order.
 
-## Current external configuration
+## Previously observed external configuration
 
 Read-only GitHub inspection confirmed Evigila/Arkheide.Essential.Culture's existing nuget environment and NUGET_USER secret name. The environment has protection_rules=[] and branch_policy=null. The secret value was not retrieved. The NuGet.org account-side trust policy and package scope remain unverified.
 
@@ -26,3 +62,24 @@ The coordinating task queried all 14 release package IDs: all six Essential 1.3.
 Automatic approval review rejected a Publish-mode negative test because the helper can fetch, create tags and push. The coordinating task substituted a read-only AST guard inspection rather than executing that mode.
 
 No commit, tag, push or NuGet publication occurred. A future Publish remains separately authorized and subject to the script's clean master, origin/master equality and exact v1.3.0 confirmation. This verification did not modify human README/documents or historical records.
+
+The current preparation task did not rerun external environment or account-policy checks. It created no commit, tag, push or publication. The new uncommitted verification/documentation files must be reviewed and committed before Publish's clean-tree requirement can pass.
+
+## Manual regression checks
+
+- Run the Blazor demo in two independent browser sessions, switch one language and confirm the other session retains its selection.
+- Check UI language and formatting culture independently, including the Chinese UI with Brazilian number/date formats.
+- Submit the host's culture form, refresh and confirm its cookie restores the selected language; reject invalid cultures and invalid antiforgery submissions.
+- Run the desktop demos and verify language switching still refreshes their bound text.
+
+No Computer Use testing was performed. The checks above remain user-operated UI acceptance checks.
+
+## 2026-10-06 Trusted Publishing correction and current evidence
+
+This section supersedes treating the earlier secret/profile request or local API-key note as the current release boundary. The user has chosen agent-executed Trusted Publishing. Both repositories already use NuGet/login@v1 with NUGET_USER, id-token: write and the nuget environment. NUGET_USER is a NuGet.org profile username; no local long-lived API key, extra nuget.exe or GitHub CLI is required. New source commits still require the user's answer under AGENTS.md.
+
+Read-only checks identified the current repositories as Evigila/Essential.Culture (ID 1327295083) and Evigila/Flourish (ID 1246107902), using build.yml and nuget policy fields. Both public environment API responses confirmed existence, zero protection rules and null branch policy. Secret presence/value and the current NuGet account policy/package permissions remain unverified. In particular, historical success must not be treated as authorization for creating the new Blazor package ID or publishing the new target versions.
+
+The [Essential v1.2.0 run 33030395528](https://github.com/Evigila/Essential.Culture/actions/runs/33030395528) completed Trusted Publishing login and push steps successfully. The [Essential master run 37291575812](https://github.com/Evigila/Essential.Culture/actions/runs/37291575812) succeeded without publishing. The [Flourish run 37291596951](https://github.com/Evigila/Flourish/actions/runs/37291596951) failed during its older full-solution restore because Essential.Blazor was absent and Wpf 1.3.0 was not published; publish was skipped before OIDC login. This is not a Trusted Publishing authentication failure or evidence of the result of today's focused release preparation.
+
+The active [release guide](nuget-release-integration.md) now records exact package scope/order, the umbrella's automatic Culture bridge, explicit EssentialPackageDirectory instead of an implicit sibling feed, isolated ArtifactsPath and the pending Gallery source-bridge consumption migration. Earlier preparation totals and external observations retain their dated scope. This documentation/audit task performed no new commit, release tag, push or NuGet publication; current preparation and public-index checks must be reported separately.

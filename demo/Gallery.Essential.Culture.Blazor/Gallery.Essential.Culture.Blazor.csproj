@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <AssemblyName>Essential.Culture.Demo.Blazor</AssemblyName>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ArkheideSystem.Essential.Culture.Demo.Blazor</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <EssentialCultureNamespace>ArkheideSystem.Essential.Culture.Demo.Blazor.Texts</EssentialCultureNamespace>
+    <EssentialCultureAutoInclude>false</EssentialCultureAutoInclude>
+    <EssentialCultureAutoCreate>false</EssentialCultureAutoCreate>
+    <EssentialCultureGeneratorEnabled>true</EssentialCultureGeneratorEnabled>
+    <EssentialCultureXamlFramework>none</EssentialCultureXamlFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Arkheide.Essential.Culture.Blazor" Version="$(VersionPrefix)" Condition="'$(UseLocalCulture)' != 'true'" />
+    <PackageReference Include="Arkheide.Essential.Culture.Generator" Version="$(VersionPrefix)" PrivateAssets="all" Condition="'$(UseLocalCulture)' != 'true'" />
+    <ProjectReference Include="../../src/Essential.Culture/Essential.Culture.Blazor/Essential.Culture.Blazor.csproj" Condition="'$(UseLocalCulture)' == 'true'" />
+    <ProjectReference Include="../../src/Essential.Culture/Essential.Culture.Generator/Essential.Culture.Generator.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" Condition="'$(UseLocalCulture)' == 'true'" />
+    <CompilerVisibleProperty Include="EssentialCultureNamespace" />
+    <CompilerVisibleProperty Include="EssentialCultureGeneratorEnabled" />
+    <CompilerVisibleProperty Include="EssentialCultureXamlFramework" />
+    <AdditionalFiles Include="Culture.json" />
+    <Content Remove="Culture.json" />
+    <None Remove="Culture.json" />
+    <EmbeddedResource Include="Culture.json" LogicalName="Demo.Texts.json" />
+  </ItemGroup>
+</Project>

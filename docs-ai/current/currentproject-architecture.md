@@ -4,7 +4,7 @@ This document explains the maintained directory and file tree from the repositor
 
 The tree omits all docs/ and docs-ai/ directories, version-control internals, IDE state, generated builds and caches (bin/, obj/, artifacts/, TestResults/, .packages/, packages/, node_modules/, x64/, x86/ and ARM64/), local agent state and archived directories. Empty directories without maintained files are omitted.
 
-Coverage: 107 maintained files and 31 directories, plus the repository root.
+Coverage: 112 maintained files and 33 directories, plus the repository root.
 
 ```text
 Essential/ — Repository root for independent modules, demos and tests.
@@ -12,17 +12,17 @@ Essential/ — Repository root for independent modules, demos and tests.
 │   └── workflows/ — Defines GitHub Actions workflows.
 │       └── build.yml — Builds, tests and verifies all release packages; matching version tags publish through the nuget environment.
 ├── demo/ — Contains runnable examples for the supported application frameworks.
-│   ├── Essential.Culture.Demo.Avalonia/ — Demonstrates localization in an Avalonia application.
+│   ├── Gallery.Essential.Culture.Avalonia/ — Demonstrates localization in an Avalonia application.
 │   │   ├── App.axaml — Defines application resources for the desktop demo.
 │   │   ├── App.axaml.cs — Starts the desktop demo and connects its localization runtime.
-│   │   ├── Essential.Culture.Demo.Avalonia.csproj — Defines the runnable Avalonia localization demo.
+│   │   ├── Gallery.Essential.Culture.Avalonia.csproj — Defines the runnable Avalonia localization demo.
 │   │   ├── GreetingDialog.axaml — Defines a localized greeting dialog.
 │   │   ├── GreetingDialog.axaml.cs — Initializes and handles the localized greeting dialog.
 │   │   ├── MainWindow.axaml — Defines the demo window with localized controls.
 │   │   ├── MainWindow.axaml.cs — Handles demo window actions and culture changes.
 │   │   ├── Program.cs — Starts the demo and configures localization for its application framework.
 │   │   └── README.md — Contains the existing startup and usage guide for this demo.
-│   ├── Essential.Culture.Demo.Blazor/ — Demonstrates scoped localization and culture switching in Blazor.
+│   ├── Gallery.Essential.Culture.Blazor/ — Demonstrates scoped localization and culture switching in Blazor.
 │   │   ├── Components/ — Contains the demo application root, routing and localized Razor UI.
 │   │   │   ├── Layout/ — Contains the demo page layout.
 │   │   │   │   └── MainLayout.razor — Provides the common container for demo pages.
@@ -37,26 +37,26 @@ Essential/ — Repository root for independent modules, demos and tests.
 │   │   │   └── app.css — Styles the demo page and language selector.
 │   │   ├── appsettings.json — Configures the Blazor demo host logging and allowed hosts.
 │   │   ├── Culture.json — Contains the embedded demo translations and generator input.
-│   │   ├── Essential.Culture.Demo.Blazor.csproj — Defines the runnable Blazor localization demo.
+│   │   ├── Gallery.Essential.Culture.Blazor.csproj — Defines the runnable Blazor localization demo.
 │   │   └── Program.cs — Registers demo catalogs, scoped localization and the Blazor host.
-│   ├── Essential.Culture.Demo.Console/ — Demonstrates localization in a console application.
-│   │   ├── Essential.Culture.Demo.Console.csproj — Defines the runnable Console localization demo.
+│   ├── Gallery.Essential.Culture/ — Demonstrates localization in a console application.
+│   │   ├── Gallery.Essential.Culture.csproj — Defines the runnable Console localization demo.
 │   │   ├── Program.cs — Starts the demo and configures localization for its application framework.
 │   │   └── README.md — Contains the existing startup and usage guide for this demo.
-│   ├── Essential.Culture.Demo.WinUI3/ — Demonstrates localization in a WinUI3 application.
+│   ├── Gallery.Essential.Culture.WinUI/ — Demonstrates localization in a WinUI3 application.
 │   │   ├── Properties/ — Contains launch configuration for the demo application.
 │   │   │   └── launchSettings.json — Configures local launch profiles and development addresses.
 │   │   ├── app.manifest — Configures Windows application identity and runtime compatibility.
 │   │   ├── App.xaml — Defines application resources for the desktop demo.
 │   │   ├── App.xaml.cs — Starts the desktop demo and connects its localization runtime.
-│   │   ├── Essential.Culture.Demo.WinUI3.csproj — Defines the runnable WinUI3 localization demo.
+│   │   ├── Gallery.Essential.Culture.WinUI.csproj — Defines the runnable WinUI3 localization demo.
 │   │   ├── MainWindow.xaml — Defines the demo window with localized controls.
 │   │   ├── MainWindow.xaml.cs — Handles demo window actions and culture changes.
 │   │   └── README.md — Contains the existing startup and usage guide for this demo.
-│   ├── Essential.Culture.Demo.Wpf/ — Demonstrates localization in a WPF application.
+│   ├── Gallery.Essential.Culture.Wpf/ — Demonstrates localization in a WPF application.
 │   │   ├── App.xaml — Defines application resources for the desktop demo.
 │   │   ├── App.xaml.cs — Starts the desktop demo and connects its localization runtime.
-│   │   ├── Essential.Culture.Demo.Wpf.csproj — Defines the runnable Wpf localization demo.
+│   │   ├── Gallery.Essential.Culture.Wpf.csproj — Defines the runnable Wpf localization demo.
 │   │   ├── GreetingDialog.xaml — Defines a localized greeting dialog.
 │   │   ├── GreetingDialog.xaml.cs — Initializes and handles the localized greeting dialog.
 │   │   ├── MainWindow.xaml — Defines the demo window with localized controls.
@@ -64,13 +64,14 @@ Essential/ — Repository root for independent modules, demos and tests.
 │   │   └── README.md — Contains the existing startup and usage guide for this demo.
 │   ├── Culture.json — Contains translations shared by the existing desktop and console demos.
 │   ├── Directory.Build.props — Imports Culture module build settings for all demo projects.
-│   ├── Essential.Culture.Demo.slnx — Opens the Avalonia, WPF, WinUI3, console and Blazor demos.
+│   ├── Gallery.Essential.Culture.slnx — Opens the Avalonia, WPF, WinUI3, console and Blazor demos.
 │   └── README.md — Contains the existing demo overview and startup guidance.
 ├── scripts/ — Contains local release preparation, package inspection and user-confirmed tag publishing commands.
 │   ├── Publish-Helper.ps1 — Prepares packages and optionally validates clean master, confirms and pushes the matching release tag.
 │   ├── Release-Common.ps1 — Loads release settings, reads versions, runs checked commands and validates release tag ancestry.
 │   ├── ReleaseSettings.psd1 — Lists the release solution, version source, ordered package IDs, dependencies, required assets and checks.
 │   ├── Test-Release.ps1 — Builds and tests Release, packs every configured library and verifies the resulting package set.
+│   ├── Verify-BlazorPackageConsumer.ps1 — Builds an isolated Blazor-only NuGet consumer and checks transitive Core and Generator integration.
 │   └── Verify-PackageSet.ps1 — Checks exact package identities, versions, dependencies and required packaged assemblies and assets.
 ├── src/ — Contains independently versioned Essential modules.
 │   └── Essential.Culture/ — Groups the Culture libraries, module build settings and existing module documentation.
@@ -121,27 +122,33 @@ Essential/ — Repository root for independent modules, demos and tests.
 │       ├── README_zh-CN.md — Contains the existing Chinese Culture module and package guide.
 │       └── README.md — Contains the existing English Culture module and package guide.
 ├── tests/ — Contains regression tests for the Culture module.
-│   ├── Essential.Culture.Blazor.Test/ — Checks scoped localization services and localized Razor rendering.
-│   │   ├── Essential.Culture.Blazor.Test.csproj — Defines the Blazor localization regression test project.
+│   ├── Tests.Essential.Culture.Blazor/ — Checks scoped localization services and localized Razor rendering.
+│   │   ├── Tests.Essential.Culture.Blazor.csproj — Defines the Blazor localization regression test project.
 │   │   ├── LocalizationServiceTests.cs — Checks catalog lookup, scope isolation, fallback, formatting and language selection.
 │   │   └── LocalizedTextTests.cs — Checks localized text rendering and component updates.
-│   ├── Essential.Culture.Generator.Test/ — Checks dictionary validation and generated localization code.
+│   ├── Tests.Essential.Culture.Generator/ — Checks dictionary validation and generated localization code.
 │   │   ├── CultureGeneratorTests.cs — Checks generated keys, framework adapters and diagnostic handling.
-│   │   └── Essential.Culture.Generator.Test.csproj — Defines the source generator regression test project.
-│   ├── Essential.Culture.Test/ — Checks the localization core and WPF and Avalonia bindings.
+│   │   └── Tests.Essential.Culture.Generator.csproj — Defines the source generator regression test project.
+│   ├── Tests.Essential.Culture/ — Checks the localization core and WPF and Avalonia bindings.
 │   │   ├── AvaloniaLocalizeExtensionTests.cs — Checks translation and refresh behavior in Avalonia bindings.
 │   │   ├── Culture.json — Contains translations used by the core and desktop binding tests.
-│   │   ├── Essential.Culture.Test.csproj — Defines the core and desktop binding regression test project.
+│   │   ├── Tests.Essential.Culture.csproj — Defines the core and desktop binding regression test project.
 │   │   ├── LocalizationContextTests.cs — Checks isolated contexts, catalog validation and formatting behavior.
 │   │   ├── LocalizerTests.cs — Checks compatibility of the existing static desktop localization API.
 │   │   ├── TestAssembly.cs — Runs tests serially to protect process-wide desktop localization state.
 │   │   └── WpfLocalizeExtensionTests.cs — Checks translation and refresh behavior in WPF bindings.
-│   ├── Essential.Culture.WinUI.Test/ — Checks WinUI localization marker handling.
-│   │   ├── Essential.Culture.WinUI.Test.csproj — Defines the WinUI marker regression test project.
+│   ├── Tests.Essential.Culture.WinUI/ — Checks WinUI localization marker handling.
+│   │   ├── Tests.Essential.Culture.WinUI.csproj — Defines the WinUI marker regression test project.
 │   │   └── WinUILocalizationMarkerTests.cs — Checks stable and dynamic WinUI localization marker encoding.
+│   ├── package-consumers/ — Contains checked-in isolated release-consumer fixtures rather than solution test projects.
+│   │   └── Tests.Essential.Culture.Blazor.PackageConsumer/ — Validates a consumer whose only direct Culture package is Blazor.
+│   │       ├── Culture.json — Supplies the independent consumer catalog and generated key input.
+│   │       ├── Program.cs — Checks transitive Core/Generator, scoped localization and encoded rendering.
+│   │       └── Tests.Essential.Culture.Blazor.PackageConsumer.csproj — Defines the isolated executable while preserving its BlazorOnly assembly identity.
 │   └── Directory.Build.props — Imports Culture module build settings for all test projects.
 ├── .gitattributes — Sets repository text normalization rules.
 ├── .gitignore — Excludes build outputs, IDE state and local caches from version control.
+├── AGENTS.md — Records portable AI ownership, collaboration and shared project naming rules.
 ├── Directory.Build.props — Defines shared package metadata, deterministic builds and the repository package output directory.
 ├── Essential.slnx — Opens the Culture module and tests and exposes the module and demo solution files.
 ├── LICENSE.txt — Contains the repository license terms.

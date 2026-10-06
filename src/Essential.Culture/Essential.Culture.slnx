@@ -6,9 +6,9 @@
   <Project Path="Essential.Culture.Generator/Essential.Culture.Generator.csproj" />
   <Project Path="Essential.Culture.Blazor/Essential.Culture.Blazor.csproj" />
   <Folder Name="/Tests/">
-    <Project Path="../../tests/Essential.Culture.Generator.Test/Essential.Culture.Generator.Test.csproj" />
-    <Project Path="../../tests/Essential.Culture.Test/Essential.Culture.Test.csproj" />
-    <Project Path="../../tests/Essential.Culture.WinUI.Test/Essential.Culture.WinUI.Test.csproj" />
-    <Project Path="../../tests/Essential.Culture.Blazor.Test/Essential.Culture.Blazor.Test.csproj" />
+    <Project Path="../../tests/Tests.Essential.Culture.Generator/Tests.Essential.Culture.Generator.csproj" />
+    <Project Path="../../tests/Tests.Essential.Culture/Tests.Essential.Culture.csproj" />
+    <Project Path="../../tests/Tests.Essential.Culture.WinUI/Tests.Essential.Culture.WinUI.csproj" />
+    <Project Path="../../tests/Tests.Essential.Culture.Blazor/Tests.Essential.Culture.Blazor.csproj" />
   </Folder>
 </Solution>

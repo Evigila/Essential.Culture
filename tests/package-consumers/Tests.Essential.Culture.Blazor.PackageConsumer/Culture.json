@@ -1,0 +1,5 @@
+{
+  "Greeting": { "en-US": "Hello", "zh-CN": "你好" },
+  "Amount": { "en-US": "Amount {0:N2}", "zh-CN": "金额 {0:N2}" },
+  "Markup": { "en-US": "<script>alert(1)</script>", "zh-CN": "<script>alert(2)</script>" }
+}

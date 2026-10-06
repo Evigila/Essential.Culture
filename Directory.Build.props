@@ -3,7 +3,7 @@
     <Authors>ArkheideSystem</Authors>
     <Company>ArkheideSystem</Company>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/Evigila/Arkheide.Essential.Culture.git</RepositoryUrl>
+    <RepositoryUrl>https://github.com/Evigila/Essential.Culture.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageOutputPath>$(MSBuildThisFileDirectory)artifacts\packages</PackageOutputPath>
     <Deterministic>true</Deterministic>

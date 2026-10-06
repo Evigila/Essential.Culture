@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <AssemblyName>BlazorOnly</AssemblyName>
+    <RootNamespace>BlazorOnly</RootNamespace>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <CulturePackageVersion Condition="'$(CulturePackageVersion)' == ''">1.3.0</CulturePackageVersion>
+    <EssentialCultureNamespace>PackageConsumer.Texts</EssentialCultureNamespace>
+    <EssentialCultureGeneratorEnabled>true</EssentialCultureGeneratorEnabled>
+    <EssentialCultureAutoInclude>false</EssentialCultureAutoInclude>
+    <EssentialCultureAutoCreate>false</EssentialCultureAutoCreate>
+    <EssentialCultureXamlFramework>none</EssentialCultureXamlFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Arkheide.Essential.Culture.Blazor" Version="$(CulturePackageVersion)" />
+    <AdditionalFiles Include="Culture.json" />
+    <None Update="Culture.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

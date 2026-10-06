@@ -30,7 +30,7 @@ public sealed class CultureGenerator : IIncrementalGenerator
     private static readonly DiagnosticDescriptor InvalidKey = new(
         "AEC003",
         "Arkheide Essential Culture key is invalid",
-        "Key '{0}' must be a non-keyword C# identifier containing only ASCII letters, digits, and underscores; replace dots with underscores",
+        "Key '{0}' must be a non-keyword C# identifier containing only ASCII letters, digits, and underscores; replace dots with underscores and avoid generated names Key, CultureKey, and value__",
         "Arkheide.Essential.Culture",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true
@@ -580,7 +580,8 @@ public sealed class CultureGenerator : IIncrementalGenerator
         && key.All(character =>
             character is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9' or '_'
         )
-        && SyntaxFacts.GetKeywordKind(key) == SyntaxKind.None;
+        && SyntaxFacts.GetKeywordKind(key) == SyntaxKind.None
+        && key is not ("Key" or "CultureKey" or "value__");
 
     private static bool IsValidNamespace(string value) =>
         value
