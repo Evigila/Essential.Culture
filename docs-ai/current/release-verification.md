@@ -1,6 +1,53 @@
-# Culture local release verification
+# Culture release verification
 
-## Latest preparation: 2026-10-06 repository metadata and dependent release
+## Latest coordinated release state on 2026-10-06
+
+Essential.Culture 1.3.0 is published, publicly indexed and verified by fresh-cache public-only consumption. Source commit [983c636bdba7e1a7b74cee33b5c682c9bf06364e](https://github.com/Evigila/Essential.Culture/commit/983c636bdba7e1a7b74cee33b5c682c9bf06364e) is tagged v1.3.0. [Run 37537838178](https://github.com/Evigila/Essential.Culture/actions/runs/37537838178) succeeded, including Trusted Publishing login and six Created uploads. All six public flat-container indexes returned HTTP 200 and contain 1.3.0.
+
+The public-source-only consumer at artifacts/public-consumers/blazor-1e4f292745bf4a2fbe68954d77b4132a restored into a fresh cache, built with warnings as errors and ran successfully. Its only direct package is Arkheide.Essential.Culture.Blazor; Core and Generator restore transitively. Generated keys, independent scoped languages, formatting culture and encoded rendering passed.
+
+Flourish 1.1.1 completed its GitHub release workflow and uploaded all six packages. Source commit [05ebb4d282eea7130fc9326ef2d15bf43593d5aa](https://github.com/Evigila/Flourish/commit/05ebb4d282eea7130fc9326ef2d15bf43593d5aa) is tagged v1.1.1. [Run 37540483235](https://github.com/Evigila/Flourish/actions/runs/37540483235) completed successfully: [build job 112531999414](https://github.com/Evigila/Flourish/actions/runs/37540483235/job/112531999414) passed, including the corrected CSS fixture; [publish job 112533073982](https://github.com/Evigila/Flourish/actions/runs/37540483235/job/112533073982) completed Trusted Publishing login and uploaded the six packages in manifest order with Created responses from 22:28:55 to 22:29:01 UTC on 2026-10-06.
+
+All six Flourish 1.1.1 public flat-container indexes now return HTTP 200 and contain 1.1.1. Fresh-cache, public-only verification completed with exit code 0 across FrameworkOnly, MetaNative, MetaDesign and MetaCulture: all 129 checks passed, covering DI activation, SSR, CSS/woff2/JavaScript assets, three languages and generated keys. Evidence: Flourish/artifacts/public-culture-release-1.1.1.log and Flourish/artifacts/package-consumers/027abe99e60f46dbaa1d15a75b670ff6. Its NuGet.Config contains one public NuGet.org source with a wildcard mapping. Every .nupkg.metadata for the six Flourish 1.1.1 packages and Essential.Blazor/Core/Generator 1.3.0 identifies https://api.nuget.org/v3/index.json; no local feed or source project reference is used. Essential's independent public-only consumer also passed. Publication, public indexing and public consumption are complete for both releases.
+
+Essential's six-package release and public consumer are complete. Flourish's successful build/login/Created uploads supersede the preceding pending correction/publication statements; its public indexing and four-mode public-only consumer are now complete. Both repositories use vars.NUGET_USER || secrets.NUGET_USER in environment nuget, with no local long-lived API key. The corrected Flourish CSS fixture passed the final build; v1.1.0 tags were preserved.
+
+Manual acceptance remains user-operated: independent Blazor sessions, UI versus formatting culture, cookie reload persistence and desktop Gallery language refresh. No Computer Use acceptance was performed. The retained evidence below is historical; earlier statements awaiting upload, fixing 1.1.1, indexing or public consumption are superseded by this completed-release section.
+
+## Final public verification and documentation boundary
+
+The public-only command & ./build/Test-BlazorPackageConsumers.ps1 -PublicSource -Version 1.1.1 completed with exit code 0. Its single-source NuGet.Config maps all packages to NuGet.org and rejects local package-directory parameters; no project reference or sibling feed participates. All six Flourish package metadata entries and the three transitive Essential metadata entries identify public https://api.nuget.org/v3/index.json.
+
+The initial public attempt failed NU1100 because duplicate names for the same NuGet.org URI collapsed to a restrictive Flourish.* mapping, excluding Microsoft.AspNetCore.App.Internal.Assets 10.0.11. Failed fixture Flourish/artifacts/package-consumers/d1afce7bb6784b64be6730553c6e64a3 retains its original config/assets/diagnostics. The explicit PublicSource verification mode fixes that fixture configuration without altering default local/CI modes or any published nupkg. Final evidence is Flourish/artifacts/public-culture-release-1.1.1.log and Flourish/artifacts/package-consumers/027abe99e60f46dbaa1d15a75b670ff6.
+
+The published tags retain their original source commits. Final technical documentation and the public-verification helper correction will be committed separately under the user's existing commit/publication authorization; they do not create a new release tag or republish packages. Future commits and publication follow AGENTS.md and the user's task-scoped authorization.
+
+## Earlier completed release verification: Essential.Culture 1.3.0 on 2026-10-06
+
+All six Essential.Culture 1.3.0 packages are published and publicly indexed. Source commit [983c636bdba7e1a7b74cee33b5c682c9bf06364e](https://github.com/Evigila/Essential.Culture/commit/983c636bdba7e1a7b74cee33b5c682c9bf06364e) is tagged v1.3.0. [Workflow run 37537838178](https://github.com/Evigila/Essential.Culture/actions/runs/37537838178) succeeded: Trusted Publishing login passed and all six package uploads returned Created. The six NuGet flat-container indexes returned HTTP 200 and contain 1.3.0:
+
+| Package | Public version index |
+|---|---|
+| Arkheide.Essential.Culture.Generator | [Generator](https://api.nuget.org/v3-flatcontainer/arkheide.essential.culture.generator/index.json) |
+| Arkheide.Essential.Culture | [Core](https://api.nuget.org/v3-flatcontainer/arkheide.essential.culture/index.json) |
+| Arkheide.Essential.Culture.Wpf | [Wpf](https://api.nuget.org/v3-flatcontainer/arkheide.essential.culture.wpf/index.json) |
+| Arkheide.Essential.Culture.Avalonia | [Avalonia](https://api.nuget.org/v3-flatcontainer/arkheide.essential.culture.avalonia/index.json) |
+| Arkheide.Essential.Culture.WinUI | [WinUI](https://api.nuget.org/v3-flatcontainer/arkheide.essential.culture.winui/index.json) |
+| Arkheide.Essential.Culture.Blazor | [Blazor](https://api.nuget.org/v3-flatcontainer/arkheide.essential.culture.blazor/index.json) |
+
+A fresh-cache consumer restored only from public NuGet sources at artifacts/public-consumers/blazor-1e4f292745bf4a2fbe68954d77b4132a. Restore, build with warnings as errors and execution all passed. Its sole direct package is Arkheide.Essential.Culture.Blazor; Core and Generator restore transitively. Generated keys, independent scoped languages, explicit formatting culture and encoded rendering passed. This is public-package consumption evidence, distinct from the earlier local candidate feed.
+
+Release preparation passed 106 automated checks (Core 61, Generator 20, Blazor 21, WinUI 4); all five Galleries compiled with zero warnings/errors. Runtime publication verifies the current Essential policy's authorization for this exact six-package release, including the new Blazor ID. It does not establish permission for future unrelated package IDs.
+
+Flourish has not been published. Both v1.1.0 workflow attempts failed in CSS verification because its fixture lacked the default package cache; publish was skipped in both. A later reproduction also encountered NU1301. The coordinating task is fixing the release path and advancing Flourish to 1.1.1. The existing v1.1.0 tag will not be overwritten. Essential's successful release must not be reported as a Flourish release.
+
+Manual acceptance remains user-operated without Computer Use: exercise independent Blazor sessions, culture versus formatting culture, cookie reload persistence and desktop Gallery language refresh. The public consumer's automated restore/build/execution passed; physical browser and desktop interaction are not claimed.
+
+## Earlier preparation and configuration evidence
+
+The retained snapshots below preceded publication. Their pending account/commit/public-index boundaries describe those earlier runs, not the completed Essential 1.3.0 release above. Flourish's local preparation results are not evidence of a public Flourish release.
+
+## Previous preparation: 2026-10-06 repository metadata and dependent release
 
 Essential's preceding full preparation passed 106 tests: Core 61, Generator 20, Blazor 21 and WinUI 4. All five Galleries compiled with zero warnings/errors and all six fresh 1.3.0 packages passed identity/dependency/asset verification. The existing isolated Blazor-only consumer verifies Core/Generator transitively with no direct Generator reference.
 
