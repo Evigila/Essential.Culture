@@ -1,33 +1,46 @@
 # Project architecture and repository tree
 
-**Status:** Verified maintained architecture inventory, updated for the authorized Culture 1.4.0 implementation and completed release. Existing naming/UI gaps are recorded below; inventory verification does not assert universal implementation compliance.
+**Status:** Verified maintained architecture inventory, updated for the installed AGENTS framework 1.0.0 and the completed Culture 1.4.0 release. Existing naming/UI gaps are recorded below; inventory verification does not assert universal implementation compliance.
 
 ## Inventory scope
 
-The inventory includes maintained files in the working tree rooted at `Essential/`, including intentionally untracked maintained files. The baseline is commit `49556163d2e72fe8ffa27cf5f942149823844bb0` plus the user's instruction/documentation migration, README changes and authorized Culture 1.4.0 implementation/release preparation.
+The inventory includes maintained files in the working tree rooted at `Essential/`, including intentionally untracked maintained files. The current baseline is commit `75548c0` plus the authorized AGENTS framework installation and audit updates. Culture implementation remains at release source commit `53ecbeb94c4d5e14f2776fbc5048b34d1471cc50`; the framework adds instruction routing, installation metadata, two repository skills and synchronization entry points without changing the Culture source or project boundaries.
 
 | Excluded path or pattern | Reason |
 | --- | --- |
 | Root `docs/` and `docs-ai/` | Human and AI documentation subtrees excluded by the documentation contract |
 | `.git/` | Version-control internals |
 | `.vs/`, `.idea/` | Editor caches and workspace state |
+| `.agents/backups/` | Temporary local installation backups created when an authorized framework synchronization replaces conflicting managed files |
 | `artifacts/`, `TestResults/` | Generated packages, audit/verification outputs, temporary consumers and test results |
 | Any `bin/` or `obj/` directory | Compiled output and generated intermediates |
 | Any `node_modules/`, `.cache/`, `__pycache__/` directory | Dependency or execution caches |
 | `*.user`, `*.suo`, `*.tmp`, `*.log` | User state and temporary output; no maintained file with these patterns was found |
 
-The maintained nested `src/Essential.Culture/docs/usage-guide.md` is included: the documentation exclusion applies to the root area. Maintained source is not omitted solely because Git ignores it. Enumeration uses `rg --files --hidden --no-ignore` with the concrete exclusions above; all 125 maintained files and 17 project entries are verified against the filesystem.
+The maintained nested `src/Essential.Culture/docs/usage-guide.md` is included: the documentation exclusion applies to the root area. Maintained source is not omitted solely because Git ignores it. Enumeration uses `rg --files --hidden --no-ignore` with the concrete exclusions above; all 133 maintained files and 17 project entries are verified against the filesystem. The framework adds eight maintained files to the earlier 125-file release inventory.
 
 ## Complete repository tree
 
 ```text
 Essential/
+|-- .agents/
+|   \-- skills/
+|       |-- audit-project-docs/
+|       |   |-- agents/
+|       |   |   \-- openai.yaml
+|       |   \-- SKILL.md
+|       \-- sync-agents-framework/
+|           |-- agents/
+|           |   \-- openai.yaml
+|           \-- SKILL.md
 |-- .gitattributes
 |-- .github/
 |   \-- workflows/
 |       \-- build.yml
 |-- .gitignore
 |-- AGENTS.ensure.json
+|-- AGENTS.framework.json
+|-- AGENTS.lock.json
 |-- AGENTS.md
 |-- demo/
 |   |-- Culture.json
@@ -86,9 +99,11 @@ Essential/
 |   \-- README.md
 |-- Directory.Build.props
 |-- Essential.slnx
+|-- fetch-agents.bat
 |-- LICENSE.txt
 |-- publish-helper.bat
 |-- scripts/
+|   |-- fetch-agents.ps1
 |   |-- Publish-Helper.ps1
 |   |-- Release-Common.ps1
 |   |-- ReleaseSettings.psd1
@@ -190,10 +205,13 @@ Essential/
 | --- | --- |
 | `Essential.slnx` | Root development solution: six Culture libraries and four test projects, with links to focused module and Gallery solutions. |
 | `Directory.Build.props` | Organization/package metadata, MIT license, repository URL, deterministic builds and `artifacts/packages` output; no module version. |
-| `AGENTS.md`, `AGENTS.ensure.json` | Instruction router and audit state; state is not runtime configuration. |
+| `AGENTS.md`, `AGENTS.ensure.json` | Instruction router and framework-version-aware documentation audit state; state is not runtime configuration or authorization. |
+| `AGENTS.framework.json`, `AGENTS.lock.json` | Installed framework 1.0.0 payload manifest and consumer installation state. The lock records source commit `8f02f0f93a906c925d8f8a466887a7aed3c2b08a`, the normalized manifest digest and managed-file baselines; audit completion remains separate. |
+| `.agents/skills/` | Two repository-scoped workflows: `audit-project-docs` verifies project facts and audit state; `sync-agents-framework` checks or applies authorized central framework updates. Each package has `SKILL.md` and `agents/openai.yaml`; skills refer to the router/shared standards rather than replacing their policy. |
+| `fetch-agents.bat`, `scripts/fetch-agents.ps1` | Windows framework bootstrap/check/synchronization entry points. Resolve one central Git commit, verify normalized payload hashes and limit updates to manifest-owned managed files or missing seed files. Preserve existing project facts and audit state, detect local conflicts and record an installation lock after successful synchronization. |
 | `.gitattributes`, `.gitignore`, `LICENSE.txt` | Text normalization, output/cache exclusions and repository license. |
 | `.github/workflows/build.yml` | Windows .NET 10 restore/build/test/Gallery/pack validation and tag-triggered NuGet Trusted Publishing. |
-| `publish-helper.bat`, `scripts/` | Release preparation/publishing entry points, exact package-set/repository/README validation, Trusted Publishing context preflight, isolated Blazor consumer and generated module consumer build/publish verification. |
+| `publish-helper.bat`, release/verification files in `scripts/` | Release preparation/publishing entry points, exact package-set/repository/README validation, Trusted Publishing context preflight, isolated Blazor consumer and generated module consumer build/publish verification. |
 | `src/Essential.Culture/` | Independently versioned localization module. Module props explicitly import root settings and set `VersionPrefix=1.4.0`; package repository/project URLs identify `https://github.com/Evigila/Essential`. |
 | `tests/` | Four xUnit suites, an executable package-consumer fixture and optional standalone performance console; props import Culture settings. |
 | `demo/` | Five runnable Gallery hosts; default NuGet mode and optional `UseLocalCulture=true` source mode; props import Culture settings. |
@@ -233,6 +251,7 @@ The focused source solution contains the same six libraries and four tests as th
 | Blazor Gallery | ASP.NET Core host, contexts scoped per request/circuit | Embedded `Demo.Texts.json`; HTTP culture form, cookie, Accept-Language initialization and Interactive Server events | `Program.cs`, project resources, `Home.razor` |
 | Generator | C# compilation/build deployment | AdditionalFiles/compiler-visible properties, explicit `CultureModule` metadata and opt-in bounded root discovery; targets validate module identities/paths, copy resources for build/publish and clean only previously tracked stale JSON outputs within the same output root; generated manifest records relative paths | Generator source, `CultureDocument.cs`, props/targets |
 | NuGet.org/GitHub Actions | Build/distribution | NuGet v3 restore/push, release tags, `Evigila/Essential`, `build.yml`, `nuget` environment and OIDC; local preflight checks context, remote policy authentication occurs in NuGet/login | Workflow/release settings/scripts |
+| Central AGENTS framework | Optional development-time synchronization | `https://github.com/Evigila/AGENTS.md.git`, default ref `main`; fetch one source commit into a temporary Git repository and verify manifest/payload digests before applying an authorized update. `-Check` leaves target project files unchanged; installed lock/version determines update state. No application runtime integration | `fetch-agents.bat`, `scripts/fetch-agents.ps1`, framework manifest and installation lock |
 | Flourish integration | External repository | No Essential project references Flourish; optional bridges/controls belong outside this checkout | ProjectReference inventory, UIUX rules and integration guide |
 
 Catalogs share lazily initialized, immutable raw/token lookup dictionaries by effective retained culture. Arbitrary requested child tags reuse their deepest retained parent or fallback, so the cache is bounded by retained culture names. Contexts retain independent culture/format state and atomically replace that state; resource I/O and JSON validation remain startup operations. These implementation boundaries support predictable hot lookup without claiming an optimal result for every workload.
@@ -250,9 +269,11 @@ No database, broker, container deployment or production-host topology is declare
 
 ## Verification and unresolved facts
 
+The framework audit independently enumerated all 133 maintained files, checked all 17 project declarations and three solution memberships, and confirmed that Culture source, project/configuration declarations and existing release scripts are unchanged from the delivery baseline. Both skill manifests/discovery files have assigned workflow content. The ten managed payload hashes agree with `AGENTS.framework.json` and the installation lock after BOM/CRLF normalization; the manifest digest also agrees with the lock. Required documentation/installation paths exist, and `docs/.gitkeep` is zero bytes. The older audit-state schema triggers a new full audit under framework 1.0.0; only the coordinating audit writes its supported completion state after all required checks and repairs succeed.
+
 Release follow-up: source commit `53ecbeb94c4d5e14f2776fbc5048b34d1471cc50` and annotated `v1.4.0` were pushed. The renamed-repository workflow passed Trusted Publishing and six uploads; all six 1.4.0 packages became publicly downloadable and passed metadata/assets verification. Fresh public-only Blazor and module consumers built and ran with zero warnings/errors, including module publish/execution. See [completed release verification](release-verification.md#completed-140-publication-on-2026-10-09). The following paragraph retains the local preparation boundary before those remote actions.
 
-Inspected the complete 125-file inventory, three solutions, 17 maintained project declarations, current props/release files and affected runtime/adapter/host source. The independent `artifacts/culture-1.4-final.log` records 201 passing tests (Core 89, Generator 82, Blazor 26, WinUI marker 4), root and all five source-mode Galleries built with zero warnings/errors, and fresh Blazor-only consumer success. After the final Generator output-ledger adjustment, the Generator candidate was repacked and the complete six-package set was verified for metadata/README/license/dependency/API-documentation/assets, including SHA-256 agreement between packaged buildTransitive files and current source. The latest fresh module consumer built/ran with zero warnings/errors and ran again from published output (`artifacts/culture-1.4-final-modules.log`). All five package-mode Galleries also restored/built with zero warnings/errors using a fresh cache and explicit candidate-source mapping (`artifacts/culture-1.4-gallery-packages.log`). No Git tag or publication was performed. Performance probing is optional and separate from xUnit/real UI acceptance. The exact 23 current dependency graphs and historical package evidence are recorded in [1_dependency.md](1_dependency.md).
+Before publication, the Culture 1.4.0 preparation inspected the then-complete 125-file inventory, three solutions, 17 maintained project declarations, props/release files and affected runtime/adapter/host source. The independent `artifacts/culture-1.4-final.log` records 201 passing tests (Core 89, Generator 82, Blazor 26, WinUI marker 4), root and all five source-mode Galleries built with zero warnings/errors, and fresh Blazor-only consumer success. After the final Generator output-ledger adjustment, the Generator candidate was repacked and the complete six-package set was verified for metadata/README/license/dependency/API-documentation/assets, including SHA-256 agreement between packaged buildTransitive files and current source. The latest fresh module consumer built/ran with zero warnings/errors and ran again from published output (`artifacts/culture-1.4-final-modules.log`). All five package-mode Galleries also restored/built with zero warnings/errors using a fresh cache and explicit candidate-source mapping (`artifacts/culture-1.4-gallery-packages.log`). No Git tag or publication was performed within that local preparation. Performance probing is optional and separate from xUnit/real UI acceptance. The exact 23 local preparation dependency graphs, subsequent public consumer evidence and historical package evidence are recorded in [1_dependency.md](1_dependency.md).
 
 The initial audit's 21 restore graphs and 106 tests (61/20/21/4) remain dated 1.3.0 historical evidence, as do preliminary 1.4.0 runs. They do not replace the final independent preparation above.
 

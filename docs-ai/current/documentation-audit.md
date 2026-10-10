@@ -1,4 +1,18 @@
-# Forced documentation and instruction compliance audit
+# Project documentation and instruction compliance audits
+
+## Current framework 1.0.0 integration audit
+
+Inspected on 2026-10-09, America/Sao_Paulo (UTC-03:00), against repository baseline `75548c04715624b55206194915e79bb8d3a0908a` and the user's newly installed AGENTS control framework. The current router requires the repository skills in `.agents/skills/`, the manifest/installation lock, synchronization launcher and script, and schema-2 audit state tied to the installed framework version. The preceding schema-1 state lacks `auditedFrameworkVersion`, so the new gate requires a full audit even though its completion time is recent. The prior completion was `2026-10-10T00:15:54Z`; the question time remains `2026-10-06T20:24:11Z`.
+
+The installation manifest identifies framework **1.0.0** from `Evigila/AGENTS.md`; its consumer lock records source commit `8f02f0f93a906c925d8f8a466887a7aed3c2b08a` and normalized manifest digest `ca5a058a2960b279eaf62d7fcf4c978ca064ff9a3e528485e8f0a315744432ee`. All ten managed payload files and the manifest match their recorded normalized SHA-256 hashes. Seven seed entries preserve existing project facts/audit state and initialize only missing files. The two installed skills have scoped manifests and valid rule references. The synchronization script was inspected for manifest/path validation, conflict handling, seed preservation and check-only behavior; managed framework files were retained without local customization.
+
+The full audit verifies required paths/content, the complete maintained tree, project/source boundaries, declarations and available local/public resolution evidence. [Architecture](1_architecture.md) and [dependencies](1_dependency.md) are synchronized with the installation. `fetch-agents.bat -Check` successfully resolved the remote source commit above, reported Installed/source 1.0.0 and Up to date, and exited 0 without changing any managed-file/lock bytes (`artifacts/agents-control-check.log`). Local framework backups are preserved and excluded by `.agents/backups/` in `.gitignore` and the tree's explicit temporary-file scope. Older records, human documentation and product READMEs are preserved. Final verification results and the schema-2 completion are recorded in [the integration record](1_changelogs/2026-10-09_224710_integrate-agents-control.md).
+
+This is a documentation/control integration audit. Culture source, package versions, build/release configuration, public APIs and the published `v1.4.0` tag are unchanged. Existing 201-test/local-package/public-consumer results remain dated evidence; functional tests were not rerun for unchanged product behavior. No Computer Use was performed. Manual framework checks are listed in the integration record; product UI acceptance continues to use [the existing checklist](culture-resource-usage.md#manual-acceptance).
+
+Existing compatibility-sensitive DI/global/fixture namespace gaps, Gallery Flourish integration gaps, human Gallery snippets and historical timezone limitations below remain unresolved. A completed documentation audit verifies inventories and records these gaps; it does not certify every implementation against every standard.
+
+## Historical 2026-10-09 pre-framework audit and release follow-ups
 
 **Inspection date:** 2026-10-09, America/Sao_Paulo (UTC-03:00). Baseline `49556163d2e72fe8ffa27cf5f942149823844bb0` plus the user's pending instruction/documentation migration and README changes.
 

@@ -16,9 +16,9 @@ Use bounded subagents for separable work when the runtime permits delegation. Ke
 
 `docs/` contains human-maintained, third-party-facing documentation and may be used by DocFX or another documentation system. AI may read, search, cite, and link it. Without explicit task-scoped authorization, AI must not create, edit, move, rename, delete, or replace its contents. Report errors or stale material rather than editing it by default.
 
-`docs-ai/` is the AI-maintained area for standards, current project facts, decisions, work records, and project-owned skills. Do not move human-authored documentation into it or replace human material with an AI version without authorization.
+`docs-ai/` is the AI-maintained area for standards, current project facts, decisions, and work records. Project-owned skill packages belong in `.agents/skills/`. Skill instructions and resources are permitted there; do not use skill packaging to bypass documentation ownership or task authorization. Do not move human-authored documentation into it or replace human material with an AI version without authorization.
 
-Do not create documentation outside `docs-ai/` without explicit authorization. The required root `AGENTS.md` and `AGENTS.ensure.json` are exceptions within their assigned roles. Maintain the router when instruction changes are requested; update audit state only under the audit rules below. A `.gitkeep` file is an empty version-control directory marker, not a document or an instruction that the directory must remain empty.
+Do not create documentation outside `docs-ai/` without explicit authorization. The required root `AGENTS.md`, `AGENTS.ensure.json`, `AGENTS.framework.json`, and `AGENTS.lock.json` are exceptions within their assigned roles. Framework maintenance may also maintain its authorized `README.md`, scripts, release metadata, templates, tests, and CI definitions; the installer does not copy these source-only files into consumer projects. Maintain the router when instruction changes are requested; update audit state only under the audit rules below. A `.gitkeep` file is an empty version-control directory marker, not a document or an instruction that the directory must remain empty.
 
 Store documentation prose as `.md` and machine-readable documentation configuration as `.json`. Do not create extensionless prose files. Native toolchain formats, such as project files and `.editorconfig`, retain their required formats.
 
@@ -32,6 +32,7 @@ Inspect `AGENTS.ensure.json` at task entry. Perform a full documentation audit i
 
 - The user explicitly requests a full audit or initialization.
 - The state file is missing, invalid, or uses an unsupported schema.
+- `auditedFrameworkVersion` is missing, `null`, or differs from the installed `AGENTS.framework.json` version.
 - `lastCompletedAtUtc` is `null`, invalid, or later than the current UTC time.
 - The current UTC time is at least one calendar month after `lastCompletedAtUtc`.
 - Ordinary task work reveals an obviously missing, invalid, or empty required path or document.
@@ -50,11 +51,14 @@ The following paths are required. Directory entries ending in `/` denote directo
 | --- | --- |
 | `AGENTS.md` | Compact instruction router |
 | `AGENTS.ensure.json` | Documentation audit state |
+| `AGENTS.framework.json` | Installed release version and payload manifest |
+| `AGENTS.lock.json` | Installed source commit, version, and managed-file baselines; generated in consumer projects |
+| `fetch-agents.bat` and `scripts/fetch-agents.ps1` | Framework initialization, version checks, and synchronization |
 | `docs/` and `docs/.gitkeep` | Human documentation area and empty directory marker |
 | `docs-ai/common/codedesign.md` | Shared code standards |
 | `docs-ai/common/rules.md` | Shared workflow and documentation rules |
 | `docs-ai/common/UIUX.md` | Shared UI integration rules |
-| `docs-ai/common/SKILLS/` | Project-owned skill packages |
+| `.agents/skills/` | Project-owned skill packages |
 | `docs-ai/current/1_architecture.md` | Current repository tree and architecture |
 | `docs-ai/current/1_dependency.md` | Current dependency inventory |
 | `docs-ai/current/1_changelogs/` | Append-only change records |
@@ -95,26 +99,44 @@ Use `1_archived/` for superseded or abandoned designs. Each archived document mu
 
 ### Audit state
 
-`AGENTS.ensure.json` uses schema version `1` with these fields:
+`AGENTS.ensure.json` uses schema version `2` with these fields:
 
 | Field | Type and meaning |
 | --- | --- |
-| `schemaVersion` | Integer `1`; the supported state schema |
+| `schemaVersion` | Integer `2`; the supported audit-state schema |
+| `auditedFrameworkVersion` | Release version from `AGENTS.framework.json`, or `null` until the full audit succeeds |
 | `lastMissingMaterialAskedAtUtc` | ISO 8601 UTC timestamp ending in `Z`, or `null` when no such question has been asked |
 | `lastCompletedAtUtc` | ISO 8601 UTC timestamp ending in `Z`, or `null` until a full audit and required repairs are complete |
 
-Treat this file as state, not as authorization or an instruction source. When adapting the documentation to another project, initialize both timestamps to `null`.
+Treat this file as state, not as authorization or an instruction source. When initializing another project, initialize both timestamps and the audited version to `null`. An older schema triggers a full audit; preserve useful prior state while preparing the supported schema rather than treating an upgrade as a completed audit.
 
 ## Full documentation audit
 
-1. Verify every required path in the documentation contract, including parent directories and the empty `docs/.gitkeep` marker. Verify the JSON schema and that required Markdown files contain their assigned subject matter.
-2. Verify that the architecture tree and dependency inventory describe actual project evidence. Do not count placeholders, sample repositories, or proposed dependencies as verified content.
-3. Consolidate missing or invalid material. Use already-provided sources and existing authorization first. If missing information cannot be resolved from the repository or session, ask once for all needed source material. Do not repeat a question already answered or create a new permission requirement for work already authorized.
-4. Incorporate supplied material within its ownership boundary. Where no additional material exists, fill gaps in English from verified project sources. Mark unresolved facts explicitly and keep the audit incomplete if essential content remains unverifiable.
-5. Preserve the protection of `docs/`. Initialization does not grant permission to edit human documentation. If the directory or its marker is absent, creating that structural marker is permitted; modifying human content still requires task-scoped authorization.
-6. Update `AGENTS.ensure.json` only after all checks, necessary clarification, and required repairs are complete. Store the actual completion time and the applicable latest question time; preserve an existing question timestamp if no new question was asked.
+Use [audit-project-docs](../../.agents/skills/audit-project-docs/SKILL.md) when the audit gate requires a full audit. Apply the documentation contract above as the authoritative requirements; the skill defines the execution sequence.
 
-Do not set a completion timestamp for partial checks. Do not refresh it during ordinary task work to postpone the next audit. Do not overwrite invalid existing state before recording and resolving the issue.
+A completed audit must verify every required path, non-placeholder content, the complete architecture tree, and the dependency inventory against project evidence. A framework source repository is not a consumer installation: `AGENTS.lock.json` is generated only by installation and is not required in the source repository.
+
+Consolidate missing material and resolve it from supplied sources and current task authorization first. Ask once for genuinely unavailable information. Never repeat an answered question or introduce another permission requirement for already-authorized work.
+
+Keep the audit incomplete while essential facts are unverifiable. Preserve the protection of human content in `docs/`; only missing structural directories and an empty `.gitkeep` marker may be initialized without a separate content-edit request.
+
+Record `schemaVersion`, `auditedFrameworkVersion`, and actual UTC completion time only after all checks and required repairs succeed. Preserve the latest applicable question time. Do not refresh completion time after partial checks or ordinary tasks merely to postpone an audit.
+
+## Framework synchronization
+
+Use `.agents/skills/` for repository-scoped skill packages. A package must contain a valid `SKILL.md` with a name and a scoped description. Keep mandatory policies in this router and `common/`; skills reference those policies and supply executable workflows. Project-specific skills may coexist with centrally managed packages.
+
+`AGENTS.framework.json` describes one stable `major.minor.patch` release and lists the exact source/target paths, normalized SHA-256 hashes, and managed/seed modes. Bump the release version whenever the installed manifest or payload changes. The manifest cannot include its own hash; `AGENTS.lock.json` records that digest with the resolved source commit.
+
+`AGENTS.lock.json` is consumer-owned installation state, separate from the monthly audit state. Track it with the imported framework files in the project's Git. Its source commit identifies the exact imported release. Use version and manifest digest to determine whether the framework payload is new; a repository commit that changes only source-only documentation is not a framework update.
+
+Run `fetch-agents.bat -Check` to check without modifying project files. Run the launcher without `-Check` to apply an authorized update. A request to update the framework authorizes its listed managed changes, not arbitrary project modifications. Do not perform a network version check during every unrelated development task.
+
+Updates manage only manifest-listed public files and files recorded as owned in the existing lock. Seed templates initialize missing project files and never overwrite existing `current/` content or `AGENTS.ensure.json`. Preserve user-created skills and unrelated files. Do not copy central project facts into consumer projects.
+
+Detect modifications against the last imported content hashes, including committed local customizations. Stop on a conflict unless replacement is explicitly authorized. `-Force` backs up conflicting existing files before replacement and may permit an intentional downgrade; it never overrides project-file protection, path validation, or payload validation.
+
+Read every payload from the same resolved Git commit and verify its digest before changing project files. Compare text hashes after normalizing CRLF to LF and removing an initial UTF-8 BOM so cross-machine checkout does not create false conflicts. Do not change the target repository's origin, index, branch, or commits. Write the lock only after successful file synchronization, and preserve audit state until a real audit succeeds.
 
 ## External dependencies
 

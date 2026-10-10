@@ -1,5 +1,6 @@
 .vs/
 .idea/
+.agents/backups/
 artifacts/
 TestResults/
 **/bin/

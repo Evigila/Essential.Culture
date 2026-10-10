@@ -1,0 +1,22 @@
+{
+    "schemaVersion":  1,
+    "repository":  "https://github.com/Evigila/AGENTS.md.git",
+    "ref":  "main",
+    "commit":  "8f02f0f93a906c925d8f8a466887a7aed3c2b08a",
+    "frameworkVersion":  "1.0.0",
+    "manifestSha256":  "ca5a058a2960b279eaf62d7fcf4c978ca064ff9a3e528485e8f0a315744432ee",
+    "managedFiles":  {
+                         "AGENTS.md":  "45e67ec0be2d6129c5699905135a05cb5374ae904b81b7be2963dbc6aa7baabe",
+                         "fetch-agents.bat":  "6ca9ae52e96f275b1d93e14abc928c32b583a4b6ded4679719a7311766eacb08",
+                         "scripts/fetch-agents.ps1":  "e2b4a0a4398e130336bbbd9ca24e16977490ced8c44f7e8afceec2b4290482d3",
+                         "docs-ai/common/rules.md":  "6ed5ae48031977d6bf9b7a3587a6528353ea3efb380a5828c7d99545b7c0d54b",
+                         "docs-ai/common/codedesign.md":  "67bd1ee5d4550db78f688022b852c23191563fe6138e1b4d541568566282e5e5",
+                         "docs-ai/common/UIUX.md":  "5a997172fa92a868823c3c620257179d7bf9e61533cd255665c2f8bbd4b390c5",
+                         ".agents/skills/audit-project-docs/SKILL.md":  "c978e78eaebe73f9975eeb3395b6e40d289cd5239a4354b08ca60b16222f11e2",
+                         ".agents/skills/audit-project-docs/agents/openai.yaml":  "256d33db1306cc6dff4242f39e748c8cccee3f317e9a22f3460f039caeb16ab0",
+                         ".agents/skills/sync-agents-framework/SKILL.md":  "e243b857cb67e3a31afcca6ba538eecc37761ea7a6513bce0bbb6d90b31e9e81",
+                         ".agents/skills/sync-agents-framework/agents/openai.yaml":  "778542e90bbe62679964a35848b88883aff86dd121bdd59648b693d8715df167",
+                         "AGENTS.framework.json":  "ca5a058a2960b279eaf62d7fcf4c978ca064ff9a3e528485e8f0a315744432ee"
+                     },
+    "synchronizedAtUtc":  "2026-10-10T01:40:16.5250129Z"
+}
