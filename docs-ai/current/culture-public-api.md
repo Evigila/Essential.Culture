@@ -2,7 +2,7 @@
 
 **Status:** Verified source inventory, not a proposed API or a release guarantee.
 
-**Inspection:** 2026-10-09, America/Sao_Paulo (UTC-03:00). Inspected the working-tree implementation based on Git revision `49556163d2e72fe8ffa27cf5f942149823844bb0`, including the approved resource implementation. The module declares candidate version `1.4.0` in [its build properties](../../src/Essential.Culture/Directory.Build.props). This version has not been published by this task.
+**Inspection:** 2026-10-09, America/Sao_Paulo (UTC-03:00). Inspected the approved resource implementation based on Git revision `49556163d2e72fe8ffa27cf5f942149823844bb0`, subsequently committed as `53ecbeb94c4d5e14f2776fbc5048b34d1471cc50` and tagged `v1.4.0`. The module declares version `1.4.0` in [its build properties](../../src/Essential.Culture/Directory.Build.props). All six packages are published and publicly verified; see [release verification](release-verification.md).
 
 This inventory covers every project-owned public type and its declared public/protected members in the six production projects, consumer-generated types, and the generator's MSBuild and diagnostic contracts. It contains **19 handwritten public types**, counting the nested `Localizer.Current` type. Consumer-generated types are additional and depend on that consumer's input. Ordinary inherited `System.Object` members and the complete APIs of third-party base classes are not repeated; their inheritance is identified. Internal types, public members inside inaccessible nested types, test helpers, and Gallery application types are not external library APIs.
 

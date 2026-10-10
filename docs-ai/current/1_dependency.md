@@ -1,8 +1,10 @@
 # Project dependency inventory
 
-**Status:** Verified current 1.4.0 declarations and complete 23-graph resolution snapshot. The 67 external package/version pairs are unchanged; all six Culture packages resolve as locally prepared 1.4.0 candidates. The prior 1.3.0 package evidence remains explicitly historical. No external package/SDK/action version was added or upgraded.
+**Status:** Verified current 1.4.0 declarations and complete 23-graph local preparation snapshot. The 67 external package/version pairs are unchanged; all six Culture packages resolved locally in that snapshot and are now published at 1.4.0. The public follow-up below is separate evidence. Prior 1.3.0 package evidence remains explicitly historical. No external package/SDK/action version was added or upgraded.
 
 ## Inventory scope and evidence
+
+Publication follow-up on `2026-10-09 22:17:39 -03:00` (`2026-10-10T01:17:39Z`): the renamed-repository [tag workflow](https://github.com/Evigila/Essential/actions/runs/38011680225) passed OIDC login and six uploads. All six publicly indexed/downloaded 1.4.0 packages passed metadata/assets/dependency validation (`artifacts/culture-1.4-public-packages/verification.json`). Two additional fresh public-only consumer graphs, under `artifacts/public-consumers/culture-1.4.0-5db326106f3e4de4a2b53f17c91da2fe/{blazor,modules}/obj/project.assets.json`, contain no source-project libraries. Blazor/Core/Generator resolve exactly 1.4.0 with public NuGet.org cache provenance; both consumers built and ran, and the module consumer also published and ran. These two generated follow-up graphs do not alter the dated 23-graph inventory or its 73 package-pair counts. See [release verification](release-verification.md).
 
 Verified at `2026-10-10T00:50:21Z` (`2026-10-09 21:50:21 -03:00`, America/Sao_Paulo). Baseline: `49556163d2e72fe8ffa27cf5f942149823844bb0` plus the authorized Culture 1.4.0 working tree. There are 17 maintained projects, including the optional performance console. The current snapshot covers 23 actual restore graphs: six libraries, four test suites, five source-mode Galleries, five isolated candidate-package Galleries, the performance console, the isolated Blazor fixture and a generated module consumer. These are 18 consuming project identities; the module consumer is temporary rather than a maintained project.
 

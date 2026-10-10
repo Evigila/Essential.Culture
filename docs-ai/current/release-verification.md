@@ -1,8 +1,18 @@
 # Culture release verification
 
-## Current local 1.4.0 candidate verification on 2026-10-09
+## Completed 1.4.0 publication on 2026-10-09
 
-The approved language policy, eager resource modules, incremental generation and bounded selection cache are implemented. Release metadata targets `https://github.com/Evigila/Essential`, version **1.4.0**, and the same six existing package IDs. This is local preparation evidence; no commit, tag, push, Trusted Publishing login or public upload was performed.
+The user-authorized source commit [53ecbeb94c4d5e14f2776fbc5048b34d1471cc50](https://github.com/Evigila/Essential/commit/53ecbeb94c4d5e14f2776fbc5048b34d1471cc50) and annotated [v1.4.0](https://github.com/Evigila/Essential/tree/v1.4.0) tag were pushed. [Run 38011680225](https://github.com/Evigila/Essential/actions/runs/38011680225) completed successfully. Its build job passed all 201 tests, six-package verification and both package consumers. Trusted Publishing exchanged the OIDC token at `2026-10-10T01:11:07Z`; uploads for Generator, Core, Wpf, Avalonia, WinUI and Blazor all returned Created between `01:11:12Z` and `01:11:17Z`. The recreated policy therefore works for these six IDs under the renamed `Evigila/Essential` repository.
+
+All six public flat-container indexes contain **1.4.0** and all six nupkg downloads succeeded, independently checked at `2026-10-10T01:15:53Z`–`01:15:57Z` (`2026-10-09 22:15:53`–`22:15:57`, UTC-03:00). Each public package passed ID/version, repository/project URL, source-commit, MIT, current/tag English README, managed assets and internal dependency checks. Generator's three buildTransitive files also match the tagged source. Evidence: `artifacts/culture-1.4-public-packages/verification.json`. Upload success, indexing and download verification are distinct observed results.
+
+The fresh-cache public-only consumers at `artifacts/public-consumers/culture-1.4.0-5db326106f3e4de4a2b53f17c91da2fe` restored using an explicit NuGet.Config with only `https://api.nuget.org/v3/index.json`. Assets contain no source-project libraries; Core/Generator/Blazor resolve exactly 1.4.0 and their `.nupkg.metadata` records the public source. Blazor and module consumers built with warnings as errors and ran successfully with zero warnings/errors. Checks cover transitive Generator, generated keys, scoped language, formatting, encoded rendering, eager module manifest and denied-language policy. The module consumer also published and ran the published output successfully. Evidence: `artifacts/culture-1.4-public-consumers.log`. Desktop adapter adoption was already verified in the five local package-mode Galleries below; no public desktop UI execution is claimed.
+
+Only the two existing module READMEs were maintained. Release-result documentation is committed separately; the published tag retains the source commit above. Manual UI acceptance remains user-operated using [the checklist](culture-resource-usage.md#manual-acceptance). The audit's existing naming/UI/history gaps remain explicit, and its full-audit timestamp was not refreshed by publication.
+
+## Local 1.4.0 candidate verification before publication on 2026-10-09
+
+The approved language policy, eager resource modules, incremental generation and bounded selection cache are implemented. Release metadata targets `https://github.com/Evigila/Essential`, version **1.4.0**, and the same six existing package IDs. This section retains local preparation evidence preceding the completed publication above; no remote release actions had occurred at this preparation boundary.
 
 The independent final `Test-Release.ps1 -ArtifactsPath ./artifacts/culture-1.4-final` completed successfully. **201 tests passed**, with no failures or skips: Core 89, Generator 82, Blazor 26 and WinUI markers 4. The source solutions and all five source-mode Galleries built with zero warnings/errors. Six packages passed identity/version/internal-graph, repository/project URL, current README, MIT license, required assets and public XML documentation checks. Evidence: `artifacts/culture-1.4-final.log`.
 

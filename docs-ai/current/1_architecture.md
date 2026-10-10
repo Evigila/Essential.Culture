@@ -1,6 +1,6 @@
 # Project architecture and repository tree
 
-**Status:** Verified maintained architecture inventory, updated for the authorized Culture 1.4.0 implementation and release preparation. Existing naming/UI gaps are recorded below; inventory verification does not assert universal implementation compliance.
+**Status:** Verified maintained architecture inventory, updated for the authorized Culture 1.4.0 implementation and completed release. Existing naming/UI gaps are recorded below; inventory verification does not assert universal implementation compliance.
 
 ## Inventory scope
 
@@ -249,6 +249,8 @@ No database, broker, container deployment or production-host topology is declare
 - Existing human README/usage/demo material is retained. Stale versions/links must be reported within their ownership boundary; this inventory does not authorize rewriting human material.
 
 ## Verification and unresolved facts
+
+Release follow-up: source commit `53ecbeb94c4d5e14f2776fbc5048b34d1471cc50` and annotated `v1.4.0` were pushed. The renamed-repository workflow passed Trusted Publishing and six uploads; all six 1.4.0 packages became publicly downloadable and passed metadata/assets verification. Fresh public-only Blazor and module consumers built and ran with zero warnings/errors, including module publish/execution. See [completed release verification](release-verification.md#completed-140-publication-on-2026-10-09). The following paragraph retains the local preparation boundary before those remote actions.
 
 Inspected the complete 125-file inventory, three solutions, 17 maintained project declarations, current props/release files and affected runtime/adapter/host source. The independent `artifacts/culture-1.4-final.log` records 201 passing tests (Core 89, Generator 82, Blazor 26, WinUI marker 4), root and all five source-mode Galleries built with zero warnings/errors, and fresh Blazor-only consumer success. After the final Generator output-ledger adjustment, the Generator candidate was repacked and the complete six-package set was verified for metadata/README/license/dependency/API-documentation/assets, including SHA-256 agreement between packaged buildTransitive files and current source. The latest fresh module consumer built/ran with zero warnings/errors and ran again from published output (`artifacts/culture-1.4-final-modules.log`). All five package-mode Galleries also restored/built with zero warnings/errors using a fresh cache and explicit candidate-source mapping (`artifacts/culture-1.4-gallery-packages.log`). No Git tag or publication was performed. Performance probing is optional and separate from xUnit/real UI acceptance. The exact 23 current dependency graphs and historical package evidence are recorded in [1_dependency.md](1_dependency.md).
 

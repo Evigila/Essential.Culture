@@ -1,6 +1,6 @@
 # Culture resource optimization proposal
 
-**Status:** Approved design, with stages 1 and 2 implemented in the 1.4.0 working-tree candidate. Stages 3 and 4 remain optional. The baseline observations below describe revision `4955616` inspected on 2026-10-09 (America/Sao_Paulo, UTC-03:00); current contracts are in [resource configuration](culture-resource-usage.md) and the [API inventory](culture-public-api.md), and executed verification is recorded separately.
+**Status:** Approved design, with stages 1 and 2 implemented and published in 1.4.0. Stages 3 and 4 remain optional. The baseline observations below describe revision `4955616` inspected on 2026-10-09 (America/Sao_Paulo, UTC-03:00); current contracts are in [resource configuration](culture-resource-usage.md) and the [API inventory](culture-public-api.md), and executed [release verification](release-verification.md) is recorded separately. Candidate wording below retains the proposal and measurement context.
 
 ## Requirements and evidence
 
