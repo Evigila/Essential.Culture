@@ -33,8 +33,11 @@ public sealed class LocalizationContext
     /// <summary>Gets the selected translation culture name.</summary>
     public string Culture => Volatile.Read(ref state).Culture;
 
-    /// <summary>Gets the cultures declared by the shared catalog.</summary>
+    /// <summary>Gets selectable cultures, or declared cultures when the catalog has no policy.</summary>
     public IReadOnlyList<string> AvailableCultures => catalog.AvailableCultures;
+
+    /// <summary>Gets all normalized cultures authored in the shared catalog's documents.</summary>
+    public IReadOnlyList<string> DeclaredCultures => catalog.DeclaredCultures;
 
     /// <summary>Gets the read-only effective formatting culture, independent of ambient culture.</summary>
     public CultureInfo FormatCulture => Volatile.Read(ref state).FormatCulture;
@@ -62,7 +65,14 @@ public sealed class LocalizationContext
                 return;
             }
 
-            Volatile.Write(ref state, CreateState(normalized, normalizedFormat));
+            var next = string.Equals(state.Culture, normalized, StringComparison.Ordinal)
+                ? state with
+                {
+                    FormatCultureName = normalizedFormat,
+                    FormatCulture = GetFormatCulture(normalizedFormat),
+                }
+                : CreateState(normalized, normalizedFormat);
+            Volatile.Write(ref state, next);
         }
 
         Changed?.Invoke(this, EventArgs.Empty);

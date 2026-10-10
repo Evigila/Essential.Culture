@@ -80,6 +80,14 @@ jobs:
       - name: Verify downloaded packages
         shell: pwsh
         run: ./scripts/Verify-PackageSet.ps1
+      - name: Verify Trusted Publishing context
+        shell: pwsh
+        env:
+          NUGET_USER: ${{ vars.NUGET_USER || secrets.NUGET_USER }}
+          TRUSTED_PUBLISHING_ENVIRONMENT: nuget
+        run: |
+          . ./scripts/Release-Common.ps1
+          Assert-TrustedPublishingContext -RequireOidc
       - name: Sign in with Trusted Publishing
         id: login
         uses: NuGet/login@v1

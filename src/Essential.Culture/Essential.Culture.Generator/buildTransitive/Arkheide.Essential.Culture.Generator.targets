@@ -1,8 +1,155 @@
 <Project>
+  <UsingTask TaskName="ValidateCultureModules" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Resources ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Collections.Generic" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var resource in Resources)
+        {
+            var id = resource.GetMetadata("ModuleId");
+            var path = resource.GetMetadata("DeploymentPath").Replace('\\', '/');
+            var valid = path.Length > 0 && path == path.Trim() && !Path.IsPathRooted(path)
+                && !path.StartsWith("/", StringComparison.Ordinal) && path.EndsWith(".json", StringComparison.OrdinalIgnoreCase);
+            foreach (var character in path) if (character < ' ' || "<>:\"|?*;".IndexOf(character) >= 0) valid = false;
+            foreach (var segment in path.Split('/'))
+            {
+                var name = segment.Split('.')[0].ToUpperInvariant();
+                if (segment.Length == 0 || segment == "." || segment == ".." || segment.EndsWith(".") || segment.EndsWith(" ")
+                    || name == "CON" || name == "PRN" || name == "AUX" || name == "NUL"
+                    || name.Length == 4 && (name.StartsWith("COM") || name.StartsWith("LPT")) && name[3] >= '1' && name[3] <= '9') valid = false;
+            }
+            if (!valid || !paths.Add(path))
+                Log.LogError(null, "AEC006", null, resource.ItemSpec, 0, 0, 0, 0,
+                    "Culture module DeploymentPath '{0}' must be a unique safe relative JSON path.", path);
+            var validId = id.Length > 0;
+            foreach (var character in id)
+                if (!(character >= 'a' && character <= 'z') && !(character >= 'A' && character <= 'Z')
+                    && !(character >= '0' && character <= '9') && character != '_' && character != '-' && character != '.') validId = false;
+            if (!validId || !ids.Add(id))
+                Log.LogError(null, "AEC006", null, resource.ItemSpec, 0, 0, 0, 0,
+                    "Culture module ModuleId '{0}' must be a unique nonempty identifier.", id);
+            if (!File.Exists(resource.GetMetadata("FullPath")))
+                Log.LogError(null, "AEC006", null, resource.ItemSpec, 0, 0, 0, 0, "Culture module file does not exist.");
+        }
+        if (Log.HasLoggedErrors) return false;
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <UsingTask TaskName="MaintainCultureOutputs" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <OutputDirectory ParameterType="System.String" Required="true" />
+      <StateFile ParameterType="System.String" Required="true" />
+      <RelativeFiles ParameterType="System.String[]" />
+      <ContentFiles ParameterType="Microsoft.Build.Framework.ITaskItem[]" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Collections.Generic" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var root = Path.GetFullPath(OutputDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + Path.DirectorySeparatorChar;
+        var current = new HashSet<string>(RelativeFiles ?? new string[0], StringComparer.OrdinalIgnoreCase);
+        var protectedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var content in ContentFiles ?? new Microsoft.Build.Framework.ITaskItem[0])
+        {
+            var path = content.GetMetadata("TargetPath");
+            if (path.Length == 0) path = content.GetMetadata("RelativePath");
+            if (path.Length == 0) path = content.GetMetadata("Link");
+            if (path.Length == 0 && !Path.IsPathRooted(content.ItemSpec)) path = content.ItemSpec;
+            if (path.Length > 0) protectedPaths.Add(path.Replace('\\', '/'));
+        }
+        if (File.Exists(StateFile))
+        {
+            var previous = File.ReadAllLines(StateFile);
+            // A changed publish/output directory must never grant deletion access to the previous directory.
+            if (previous.Length > 0 && string.Equals(previous[0], root, StringComparison.OrdinalIgnoreCase))
+                for (var index = 1; index < previous.Length; index++)
+                {
+                    var relative = previous[index].Replace('\\', '/');
+                    if (current.Contains(relative) || protectedPaths.Contains(relative) || !relative.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+                        || Path.IsPathRooted(relative) || relative.StartsWith("/") || relative.IndexOf(':') >= 0) continue;
+                    var segments = relative.Split('/');
+                    var safe = true;
+                    foreach (var segment in segments) if (segment.Length == 0 || segment == "." || segment == "..") safe = false;
+                    if (!safe) continue;
+                    var target = Path.GetFullPath(Path.Combine(root, relative));
+                    if (!target.StartsWith(root, StringComparison.OrdinalIgnoreCase)) continue;
+                    var directory = Path.GetDirectoryName(target);
+                    while (directory != null && directory.Length >= root.TrimEnd(Path.DirectorySeparatorChar).Length)
+                    {
+                        if (Directory.Exists(directory) && (File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0) { safe = false; break; }
+                        directory = Path.GetDirectoryName(directory);
+                    }
+                    if (safe && File.Exists(target)) File.Delete(target);
+                }
+        }
+        if (current.Count > 0)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(StateFile)));
+            var values = new List<string>(current);
+            values.Sort(StringComparer.Ordinal);
+            values.Insert(0, root);
+            File.WriteAllLines(StateFile, values);
+        }
+        else if (File.Exists(StateFile)) File.Delete(StateFile);
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="EssentialCulturePrepareModules" BeforeTargets="EssentialCulturePrepareDefaultDocument;PrepareForBuild;GenerateMSBuildEditorConfigFile"
+          Condition="'$(EssentialCultureAutoInclude)' != 'false'">
+    <Error Code="AEC006" Text="EssentialCultureModulesEnabled must be 'true' or 'false'."
+           Condition="'$(EssentialCultureModulesEnabled)' != '' and '$(EssentialCultureModulesEnabled)' != 'true' and '$(EssentialCultureModulesEnabled)' != 'false'" />
+    <ItemGroup Condition="'$(EssentialCultureModulesEnabled)' == 'true'">
+      <CultureModule Include="$(MSBuildProjectDirectory)\Culture.*.json"
+                     Exclude="@(CultureModule);$(MSBuildProjectDirectory)\Culture.options.json;$(MSBuildProjectDirectory)\Culture.json" />
+    </ItemGroup>
+    <ItemGroup>
+      <_EssentialCultureCanonicalModule Include="@(CultureModule->'%(FullPath)')" />
+      <CultureModule Remove="@(CultureModule)" />
+      <CultureModule Include="@(_EssentialCultureCanonicalModule)" />
+    </ItemGroup>
+    <ItemGroup Condition="('@(CultureModule)' != '' or '$(EssentialCultureModulesEnabled)' == 'true') and Exists('$(MSBuildProjectDirectory)\Culture.json')">
+      <CultureModule Include="$(MSBuildProjectDirectory)\Culture.json" Exclude="@(CultureModule)" />
+    </ItemGroup>
+    <ItemGroup>
+      <CultureModule>
+        <ModuleId Condition="'%(CultureModule.ModuleId)' == ''">%(CultureModule.Filename)</ModuleId>
+        <DeploymentPath Condition="'%(CultureModule.DeploymentPath)' == '' and '%(CultureModule.Link)' != ''">%(CultureModule.Link)</DeploymentPath>
+        <DeploymentPath Condition="'%(CultureModule.DeploymentPath)' == ''">%(CultureModule.Filename)%(CultureModule.Extension)</DeploymentPath>
+      </CultureModule>
+    </ItemGroup>
+    <ValidateCultureModules Resources="@(CultureModule)" Condition="'@(CultureModule)' != ''" />
+    <ItemGroup Condition="'@(CultureModule)' != ''">
+      <AdditionalFiles Remove="@(CultureModule)" />
+      <AdditionalFiles Include="@(CultureModule)">
+        <CultureModule>true</CultureModule>
+        <CultureModuleId>%(CultureModule.ModuleId)</CultureModuleId>
+        <CultureDeploymentPath>%(CultureModule.DeploymentPath)</CultureDeploymentPath>
+      </AdditionalFiles>
+      <Content Remove="@(CultureModule)" />
+      <Content Include="@(CultureModule)">
+        <Link>%(CultureModule.DeploymentPath)</Link>
+        <TargetPath>%(CultureModule.DeploymentPath)</TargetPath>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </Content>
+    </ItemGroup>
+  </Target>
+
   <Target
     Name="EssentialCulturePrepareDefaultDocument"
+    DependsOnTargets="EssentialCulturePrepareModules"
     BeforeTargets="PrepareForBuild;GenerateMSBuildEditorConfigFile"
-    Condition="'$(EssentialCultureAutoInclude)' != 'false'">
+    Condition="'$(EssentialCultureAutoInclude)' != 'false' and '@(CultureModule)' == ''">
     <PropertyGroup>
       <_EssentialCultureDefaultDocument>$(MSBuildProjectDirectory)\Culture.json</_EssentialCultureDefaultDocument>
     </PropertyGroup>
@@ -40,6 +187,22 @@
         CopyToPublishDirectory="PreserveNewest"
         Condition="'@(_EssentialCultureExistingContent)' == ''" />
     </ItemGroup>
+  </Target>
+
+  <Target Name="EssentialCultureCleanStaleBuildModules" AfterTargets="CopyFilesToOutputDirectory"
+          Condition="'$(DesignTimeBuild)' != 'true' and '$(EssentialCultureAutoInclude)' != 'false' and ('@(CultureModule)' != '' or Exists('$(IntermediateOutputPath)Essential.Culture.modules.build.list'))">
+    <MaintainCultureOutputs OutputDirectory="$(TargetDir)"
+                            StateFile="$(IntermediateOutputPath)Essential.Culture.modules.build.list"
+                            RelativeFiles="@(CultureModule->'%(DeploymentPath)')"
+                            ContentFiles="@(Content);@(ContentWithTargetPath);@(_NoneWithTargetPath);@(_SourceItemsToCopyToOutputDirectory);@(_SourceItemsToCopyToOutputDirectoryAlways);@(_SourceItemsToCopyToOutputDirectoryIfDifferent)" />
+  </Target>
+
+  <Target Name="EssentialCultureCleanStalePublishModules" AfterTargets="Publish"
+          Condition="'$(DesignTimeBuild)' != 'true' and '$(EssentialCultureAutoInclude)' != 'false' and '$(PublishDir)' != '' and ('@(CultureModule)' != '' or Exists('$(IntermediateOutputPath)Essential.Culture.modules.publish.list'))">
+    <MaintainCultureOutputs OutputDirectory="$(PublishDir)"
+                            StateFile="$(IntermediateOutputPath)Essential.Culture.modules.publish.list"
+                            RelativeFiles="@(CultureModule->'%(DeploymentPath)')"
+                            ContentFiles="@(ResolvedFileToPublish)" />
   </Target>
 
 </Project>

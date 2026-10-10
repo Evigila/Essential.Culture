@@ -7,7 +7,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
-    <CulturePackageVersion Condition="'$(CulturePackageVersion)' == ''">1.3.0</CulturePackageVersion>
+    <CulturePackageVersion Condition="'$(CulturePackageVersion)' == ''">1.4.0</CulturePackageVersion>
     <EssentialCultureNamespace>PackageConsumer.Texts</EssentialCultureNamespace>
     <EssentialCultureGeneratorEnabled>true</EssentialCultureGeneratorEnabled>
     <EssentialCultureAutoInclude>false</EssentialCultureAutoInclude>

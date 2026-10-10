@@ -1,17 +1,25 @@
 namespace ArkheideSystem.Essential.Culture;
 
 /// <summary>
-/// Provides the process-wide Arkheide Essential Culture entry point.
+/// Provides the process-wide localization entry point.
 /// </summary>
 public static class Localizer
 {
+    /// <summary>
+    /// Configures the process-wide facade once, before its first lookup, state access, or event
+    /// subscription. Catalog loading is explicit; this method never loads the default file.
+    /// </summary>
+    public static void Configure(
+        LocalizationCatalog catalog, string culture = "en-US", string? formatCulture = null
+    ) => LocalizationRuntime.Configure(catalog, culture, formatCulture);
+
     /// <summary>Provides the dynamic culture state.</summary>
     public static class Current
     {
         /// <summary>Gets the currently selected culture name.</summary>
         public static string Culture => LocalizationRuntime.Shared.Culture;
 
-        /// <summary>Gets the cultures declared by Culture.json.</summary>
+        /// <summary>Gets selectable cultures, or declared cultures when no policy is configured.</summary>
         public static IReadOnlyList<string> AvailableCultures =>
             LocalizationRuntime.Shared.AvailableCultures;
 

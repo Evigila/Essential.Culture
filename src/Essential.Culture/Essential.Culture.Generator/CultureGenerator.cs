@@ -29,7 +29,7 @@ public sealed class CultureGenerator : IIncrementalGenerator
     );
     private static readonly DiagnosticDescriptor InvalidKey = new(
         "AEC003",
-        "Arkheide Essential Culture key is invalid",
+        "Culture key is invalid",
         "Key '{0}' must be a non-keyword C# identifier containing only ASCII letters, digits, and underscores; replace dots with underscores and avoid generated names Key, CultureKey, and value__",
         "Arkheide.Essential.Culture",
         DiagnosticSeverity.Error,
@@ -37,7 +37,7 @@ public sealed class CultureGenerator : IIncrementalGenerator
     );
     private static readonly DiagnosticDescriptor InvalidConfiguration = new(
         "AEC004",
-        "Arkheide Essential Culture generator configuration is invalid",
+        "Culture generator configuration is invalid",
         "EssentialCultureGeneratorEnabled must be 'auto', 'true', or 'false'; found '{0}'",
         "Arkheide.Essential.Culture",
         DiagnosticSeverity.Error,
@@ -45,104 +45,88 @@ public sealed class CultureGenerator : IIncrementalGenerator
     );
     private static readonly DiagnosticDescriptor InvalidXamlFramework = new(
         "AEC005",
-        "Arkheide Essential Culture XAML framework configuration is invalid",
+        "Culture XAML framework configuration is invalid",
         "{0}",
         "Arkheide.Essential.Culture",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
 
+    private static readonly DiagnosticDescriptor InvalidModule = new(
+        "AEC006", "Culture module configuration is invalid", "{0}",
+        "Arkheide.Essential.Culture", DiagnosticSeverity.Error, isEnabledByDefault: true);
+    private static readonly DiagnosticDescriptor DuplicateModuleKey = new(
+        "AEC007", "Culture key is defined by multiple resources",
+        "Key '{0}' is declared by both '{1}' and '{2}'",
+        "Arkheide.Essential.Culture", DiagnosticSeverity.Error, isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var documents = context
-            .AdditionalTextsProvider.Where(static file =>
-                string.Equals(
-                    Path.GetFileName(file.Path),
-                    "Culture.json",
-                    StringComparison.OrdinalIgnoreCase
-                )
-            )
-            .Select(
-                static (file, cancellationToken) => new LocalizationDocument(
-                    file.GetText(cancellationToken)?.ToString() ?? string.Empty
-                )
-            )
-            .Collect()
-            .WithTrackingName("CultureDocuments");
         var configuration = context.AnalyzerConfigOptionsProvider.Select(
             static (options, cancellationToken) =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 return new GeneratorConfiguration(
-                    GetGlobalOption(
-                        options,
-                        "build_property.EssentialCultureNamespace",
-                        "build_property.ArkheideEssentialCultureNamespace"
-                    ),
-                    GetGlobalOption(
-                        options,
-                        "build_property.EssentialCultureGeneratorEnabled",
-                        "build_property.ArkheideEssentialCultureGeneratorEnabled"
-                    ),
-                    GetGlobalOption(
-                        options,
-                        "build_property.EssentialCultureXamlFramework",
-                        "build_property.ArkheideEssentialCultureXamlFramework"
-                    )
-                );
-            }
-        ).WithTrackingName("CultureConfiguration");
+                    GetGlobalOption(options, "build_property.EssentialCultureNamespace", "build_property.ArkheideEssentialCultureNamespace"),
+                    GetGlobalOption(options, "build_property.EssentialCultureGeneratorEnabled", "build_property.ArkheideEssentialCultureGeneratorEnabled"),
+                    GetGlobalOption(options, "build_property.EssentialCultureXamlFramework", "build_property.ArkheideEssentialCultureXamlFramework"),
+                    GetGlobalOption(options, "build_property.EssentialCultureModulesEnabled"),
+                    GetGlobalOption(options, "build_property.EssentialCultureFallbackCulture"));
+            }).WithTrackingName("CultureConfiguration");
+
+        var resources = context.AdditionalTextsProvider.Combine(context.AnalyzerConfigOptionsProvider)
+            .Select(static (pair, token) => ReadInput(pair.Left, pair.Right, token))
+            .Where(static input => input is not null)
+            .Select(static (input, _) => input!)
+            .WithTrackingName("CultureResourceInputs");
+        var fallback = configuration.Select(static (settings, _) => settings.FallbackCulture);
+        var parsed = resources.Combine(fallback)
+            .Select(static (pair, token) => ResourceParser.Parse(pair.Left, pair.Right, token))
+            .WithTrackingName("CultureParsedResources");
+        var documents = parsed.Select(static (resource, _) => resource.Shape)
+            .WithTrackingName("CultureResourceShapes")
+            .Collect().WithTrackingName("CultureDocuments");
         var availableFrameworks = context.CompilationProvider.Select(
             static (compilation, cancellationToken) =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var frameworks = XamlFramework.None;
-                if (
-                    compilation.GetTypeByMetadataName(
-                        "ArkheideSystem.Essential.Culture.Wpf.WpfLocalizeExtensionBase"
-                    ) is not null
-                )
-                {
+                if (compilation.GetTypeByMetadataName("ArkheideSystem.Essential.Culture.Wpf.WpfLocalizeExtensionBase") is not null)
                     frameworks |= XamlFramework.Wpf;
-                }
-
-                if (
-                    compilation.GetTypeByMetadataName(
-                        "ArkheideSystem.Essential.Culture.Avalonia.AvaloniaLocalizeExtensionBase"
-                    ) is not null
-                )
-                {
+                if (compilation.GetTypeByMetadataName("ArkheideSystem.Essential.Culture.Avalonia.AvaloniaLocalizeExtensionBase") is not null)
                     frameworks |= XamlFramework.Avalonia;
-                }
-
-                if (
-                    compilation.GetTypeByMetadataName(
-                        "ArkheideSystem.Essential.Culture.WinUI.WinUILocalizeExtensionBase"
-                    ) is not null
-                )
-                {
+                if (compilation.GetTypeByMetadataName("ArkheideSystem.Essential.Culture.WinUI.WinUILocalizeExtensionBase") is not null)
                     frameworks |= XamlFramework.WinUI;
-                }
-
                 return frameworks;
-            }
-        ).WithTrackingName("CultureXamlFrameworkReferences");
-
-        var inputs = documents
-            .Combine(configuration)
-            .Combine(availableFrameworks)
+            }).WithTrackingName("CultureXamlFrameworkReferences");
+        var inputs = documents.Combine(configuration).Combine(availableFrameworks)
             .WithTrackingName("CultureGenerationInputs");
+        context.RegisterSourceOutput(inputs, static (production, input) =>
+            Generate(production, input.Left.Left, input.Left.Right, input.Right));
+        // Diagnostics retain precise source locations independently of the translation-free output shape.
+        context.RegisterSourceOutput(parsed.Collect().Combine(configuration).Combine(availableFrameworks),
+            static (production, input) => ReportDiagnostics(production, input.Left.Left, input.Left.Right, input.Right));
+    }
 
-        context.RegisterSourceOutput(
-            inputs,
-            static (productionContext, input) =>
-                Generate(
-                    productionContext,
-                    input.Left.Left,
-                    input.Left.Right,
-                    input.Right
-                )
-        );
+    private static ResourceInput? ReadInput(AdditionalText file, AnalyzerConfigOptionsProvider options, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (string.Equals(GetGlobalOption(options, "build_property.EssentialCultureGeneratorEnabled",
+            "build_property.ArkheideEssentialCultureGeneratorEnabled").Trim(), "false", StringComparison.OrdinalIgnoreCase)) return null;
+        var metadata = options.GetOptions(file);
+        metadata.TryGetValue("build_metadata.AdditionalFiles.CultureModule", out var marked);
+        var module = string.Equals(marked, "true", StringComparison.OrdinalIgnoreCase);
+        var name = Path.GetFileName(file.Path);
+        var discovery = string.Equals(GetGlobalOption(options, "build_property.EssentialCultureModulesEnabled").Trim(), "true", StringComparison.OrdinalIgnoreCase);
+        var traditional = string.Equals(name, "Culture.json", StringComparison.OrdinalIgnoreCase);
+        var discovered = discovery && name.StartsWith("Culture.", StringComparison.OrdinalIgnoreCase)
+            && name.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(name, "Culture.options.json", StringComparison.OrdinalIgnoreCase);
+        if (!module && !traditional && !discovered) return null;
+        metadata.TryGetValue("build_metadata.AdditionalFiles.CultureModuleId", out var id);
+        metadata.TryGetValue("build_metadata.AdditionalFiles.CultureDeploymentPath", out var path);
+        return new ResourceInput(file.Path, file.GetText(token)?.ToString() ?? string.Empty,
+            module || discovered && !traditional, id ?? string.Empty, path ?? string.Empty);
     }
 
     private static string GetGlobalOption(
@@ -164,123 +148,23 @@ public sealed class CultureGenerator : IIncrementalGenerator
 
     private static void Generate(
         SourceProductionContext context,
-        IReadOnlyList<LocalizationDocument> documents,
+        IReadOnlyList<ResourceShape> documents,
         GeneratorConfiguration configuration,
-        XamlFramework availableFrameworks
-    )
+        XamlFramework availableFrameworks)
     {
         context.CancellationToken.ThrowIfCancellationRequested();
-        if (!TryGetMode(configuration.Enabled, out var mode))
-        {
-            context.ReportDiagnostic(
-                Diagnostic.Create(InvalidConfiguration, Location.None, configuration.Enabled)
-            );
-            return;
-        }
-
-        if (mode == GeneratorMode.Disabled)
-        {
-            return;
-        }
-
-        if (mode == GeneratorMode.Auto && documents.Count == 0)
-        {
-            return;
-        }
-
-        if (documents.Count != 1)
-        {
-            context.ReportDiagnostic(
-                Diagnostic.Create(MissingDocument, Location.None, documents.Count)
-            );
-            return;
-        }
-
-        if (
-            !string.IsNullOrWhiteSpace(configuration.TargetNamespace)
-            && !IsValidNamespace(configuration.TargetNamespace)
-        )
-        {
-            context.ReportDiagnostic(
-                Diagnostic.Create(
-                    InvalidDocument,
-                    Location.None,
-                    $"uses invalid EssentialCultureNamespace '{configuration.TargetNamespace}'"
-                )
-            );
-            return;
-        }
-
-        string[] keys;
-        if (
-            !JsonKeyReader.TryRead(
-                documents[0].Content,
-                context.CancellationToken,
-                out keys,
-                out var parseError
-            )
-        )
-        {
-            context.ReportDiagnostic(
-                Diagnostic.Create(
-                    InvalidDocument,
-                    Location.None,
-                    $"contains invalid JSON: {parseError}"
-                )
-            );
-            return;
-        }
-
-        var unique = new HashSet<string>(StringComparer.Ordinal);
-        var collected = new List<string>();
-        foreach (var key in keys)
-        {
-            context.CancellationToken.ThrowIfCancellationRequested();
-            if (!IsValidKey(key))
-            {
-                context.ReportDiagnostic(Diagnostic.Create(InvalidKey, Location.None, key));
-                continue;
-            }
-
-            if (!unique.Add(key))
-            {
-                context.ReportDiagnostic(
-                    Diagnostic.Create(
-                        InvalidDocument,
-                        Location.None,
-                        $"contains duplicate key '{key}'"
-                    )
-                );
-                continue;
-            }
-
-            collected.Add(key);
-        }
-
-        keys = [.. collected.OrderBy(key => key, StringComparer.Ordinal)];
-
-        if (keys.Length == 0)
-        {
-            context.ReportDiagnostic(
-                Diagnostic.Create(InvalidDocument, Location.None, "does not contain any valid keys")
-            );
-            return;
-        }
-
-        if (
-            !TrySelectXamlFramework(
-                configuration.XamlFramework,
-                availableFrameworks,
-                out var xamlFramework,
-                out var frameworkError
-            )
-        )
-        {
-            context.ReportDiagnostic(
-                Diagnostic.Create(InvalidXamlFramework, Location.None, frameworkError)
-            );
-            return;
-        }
+        if (!TryGetMode(configuration.Enabled, out var mode) || mode == GeneratorMode.Disabled
+            || !TryGetModules(configuration.Modules, out var discover) || !configuration.ValidFallback
+            || !IsValidNamespace(configuration.TargetNamespace)) return;
+        var modular = discover || documents.Any(document => document.IsModule);
+        if (documents.Count == 0 || !modular && documents.Count != 1
+            || documents.Any(document => !document.IsValid)) return;
+        if (modular && !ValidModuleIdentities(documents)) return;
+        var allKeys = documents.SelectMany(document => document.Keys).ToArray();
+        if (allKeys.Distinct(StringComparer.Ordinal).Count() != allKeys.Length) return;
+        var keys = allKeys.OrderBy(key => key, StringComparer.Ordinal).ToArray();
+        if (keys.Length == 0 || !TrySelectXamlFramework(configuration.XamlFramework, availableFrameworks,
+                out var xamlFramework, out _)) return;
 
         var source = new StringBuilder();
         source.AppendLine("// <auto-generated />");
@@ -318,6 +202,9 @@ public sealed class CultureGenerator : IIncrementalGenerator
 
         source.AppendLine("}");
         context.AddSource("Key.g.cs", SourceText.From(source.ToString(), Encoding.UTF8));
+        if (modular)
+            context.AddSource("CultureResources.g.cs", SourceText.From(
+                GenerateResources(configuration.TargetNamespace, documents, configuration.FallbackCulture), Encoding.UTF8));
 
         if (xamlFramework != XamlFramework.None)
         {
@@ -329,6 +216,131 @@ public sealed class CultureGenerator : IIncrementalGenerator
                 )
             );
         }
+    }
+
+    private static void ReportDiagnostics(SourceProductionContext context, IReadOnlyList<ParsedResource> resources,
+        GeneratorConfiguration configuration, XamlFramework frameworks)
+    {
+        if (!TryGetMode(configuration.Enabled, out var mode))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(InvalidConfiguration, Location.None, configuration.Enabled));
+            return;
+        }
+        if (mode == GeneratorMode.Disabled) return;
+        if (!TryGetModules(configuration.Modules, out var discovery))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(InvalidModule, Location.None, "EssentialCultureModulesEnabled must be 'true' or 'false'."));
+            return;
+        }
+        if (mode == GeneratorMode.Auto && resources.Count == 0) return;
+        var modular = discovery || resources.Any(resource => resource.Shape.IsModule);
+        if (resources.Count == 0 || !modular && resources.Count != 1)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(MissingDocument, Location.None, resources.Count));
+            return;
+        }
+        if (!configuration.ValidFallback)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(InvalidModule, Location.None, "EssentialCultureFallbackCulture is invalid."));
+            return;
+        }
+        if (!IsValidNamespace(configuration.TargetNamespace))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(InvalidDocument, Location.None,
+                $"uses invalid EssentialCultureNamespace '{configuration.TargetNamespace}'"));
+            return;
+        }
+        foreach (var resource in resources)
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+            foreach (var issue in resource.Issues)
+                context.ReportDiagnostic(Diagnostic.Create(issue.InvalidKey ? InvalidKey : InvalidDocument,
+                    resource.Location(issue.Offset, issue.Length), issue.InvalidKey ? issue.Message : $"'{resource.Input.Path}' {issue.Message}"));
+        }
+        if (modular)
+        {
+            var ids = new Dictionary<string, ParsedResource>(StringComparer.OrdinalIgnoreCase);
+            var paths = new Dictionary<string, ParsedResource>(StringComparer.OrdinalIgnoreCase);
+            foreach (var resource in resources.OrderBy(item => item.Input.Path, StringComparer.Ordinal))
+            {
+                var shape = resource.Shape;
+                if (!IsValidModuleId(shape.ModuleId))
+                    context.ReportDiagnostic(Diagnostic.Create(InvalidModule, resource.Location(0), $"'{shape.Path}' has invalid ModuleId '{shape.ModuleId}'."));
+                else if (ids.TryGetValue(shape.ModuleId, out var firstId))
+                    context.ReportDiagnostic(Diagnostic.Create(InvalidModule, resource.Location(0), [firstId.Location(0)], null,
+                        $"ModuleId '{shape.ModuleId}' is used by both '{firstId.Input.Path}' and '{shape.Path}'."));
+                else ids.Add(shape.ModuleId, resource);
+                if (!IsSafeDeploymentPath(shape.DeploymentPath))
+                    context.ReportDiagnostic(Diagnostic.Create(InvalidModule, resource.Location(0), $"'{shape.Path}' has unsafe DeploymentPath '{shape.DeploymentPath}'."));
+                else if (paths.TryGetValue(shape.DeploymentPath, out var firstPath))
+                    context.ReportDiagnostic(Diagnostic.Create(InvalidModule, resource.Location(0), [firstPath.Location(0)], null,
+                        $"DeploymentPath '{shape.DeploymentPath}' is used by both '{firstPath.Input.Path}' and '{shape.Path}'."));
+                else paths.Add(shape.DeploymentPath, resource);
+            }
+        }
+        var seen = new Dictionary<string, (ParsedResource Resource, KeyOccurrence Key)>(StringComparer.Ordinal);
+        foreach (var resource in resources.OrderBy(item => item.Input.Path, StringComparer.Ordinal))
+        {
+            foreach (var key in resource.Keys)
+            {
+                if (seen.TryGetValue(key.Key, out var first))
+                    context.ReportDiagnostic(Diagnostic.Create(DuplicateModuleKey, resource.Location(key.Offset, key.Length),
+                        [first.Resource.Location(first.Key.Offset, first.Key.Length)], null,
+                        key.Key, first.Resource.Input.Path, resource.Input.Path));
+                else seen.Add(key.Key, (resource, key));
+            }
+        }
+        if (resources.All(resource => resource.Shape.IsValid) && !TrySelectXamlFramework(configuration.XamlFramework, frameworks, out _, out var error))
+            context.ReportDiagnostic(Diagnostic.Create(InvalidXamlFramework, Location.None, error));
+    }
+
+    private static bool TryGetModules(string configured, out bool enabled)
+    {
+        enabled = string.Equals(configured.Trim(), "true", StringComparison.OrdinalIgnoreCase);
+        return string.IsNullOrWhiteSpace(configured) || enabled || string.Equals(configured.Trim(), "false", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsValidModuleId(string id) => id.Length > 0
+        && id.All(character => character is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '9' or '_' or '-' or '.');
+
+    private static bool IsSafeDeploymentPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || path != path.Trim() || path.StartsWith("/", StringComparison.Ordinal)
+            || !path.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+            || path.Any(character => character < ' ' || "<>:\"|?*;".IndexOf(character) >= 0)) return false;
+        return path.Split('/').All(part => part.Length > 0 && part is not ("." or "..")
+            && !part.EndsWith(".", StringComparison.Ordinal) && !part.EndsWith(" ", StringComparison.Ordinal)
+            && !IsDeviceName(part));
+    }
+
+    private static bool IsDeviceName(string segment)
+    {
+        var name = segment.Split('.')[0].ToUpperInvariant();
+        return name is "CON" or "PRN" or "AUX" or "NUL" || name.Length == 4
+            && (name.StartsWith("COM", StringComparison.Ordinal) || name.StartsWith("LPT", StringComparison.Ordinal))
+            && name[3] is >= '1' and <= '9';
+    }
+
+    private static bool ValidModuleIdentities(IReadOnlyList<ResourceShape> resources) =>
+        resources.All(resource => IsValidModuleId(resource.ModuleId) && IsSafeDeploymentPath(resource.DeploymentPath))
+        && resources.Select(resource => resource.ModuleId).Distinct(StringComparer.OrdinalIgnoreCase).Count() == resources.Count
+        && resources.Select(resource => resource.DeploymentPath).Distinct(StringComparer.OrdinalIgnoreCase).Count() == resources.Count;
+
+    private static string GenerateResources(string targetNamespace, IReadOnlyList<ResourceShape> resources, string fallback)
+    {
+        var source = new StringBuilder("// <auto-generated />\n#nullable enable\nnamespace ");
+        source.Append(targetNamespace).AppendLine(";");
+        source.AppendLine("internal static class CultureResources");
+        source.AppendLine("{");
+        source.Append("    internal const string FallbackCulture = ").Append(SymbolDisplay.FormatLiteral(fallback, true)).AppendLine(";");
+        source.AppendLine("    internal static global::System.Collections.Generic.IReadOnlyList<string> Files { get; } =");
+        source.AppendLine("        global::System.Array.AsReadOnly(new string[]");
+        source.AppendLine("        {");
+        foreach (var resource in resources.OrderBy(resource => resource.DeploymentPath, StringComparer.Ordinal))
+            source.Append("            ").Append(SymbolDisplay.FormatLiteral(resource.DeploymentPath, true)).AppendLine(",");
+        source.AppendLine("        });");
+        source.AppendLine("}");
+        return source.ToString();
     }
 
     private static string GenerateLocalizeFacade(
@@ -574,7 +586,7 @@ public sealed class CultureGenerator : IIncrementalGenerator
         }
     }
 
-    private static bool IsValidKey(string key) =>
+    internal static bool IsValidKey(string key) =>
         key.Length > 0
         && key[0] is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or '_'
         && key.All(character =>
@@ -591,57 +603,33 @@ public sealed class CultureGenerator : IIncrementalGenerator
                 && SyntaxFacts.GetKeywordKind(part) == SyntaxKind.None
             );
 
-    private sealed class LocalizationDocument : IEquatable<LocalizationDocument>
-    {
-        public LocalizationDocument(string content)
-        {
-            Content = content;
-        }
-
-        public string Content { get; }
-
-        public bool Equals(LocalizationDocument? other) =>
-            other is not null && string.Equals(Content, other.Content, StringComparison.Ordinal);
-
-        public override bool Equals(object? obj) => Equals(obj as LocalizationDocument);
-
-        public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(Content);
-    }
-
     private sealed class GeneratorConfiguration : IEquatable<GeneratorConfiguration>
     {
-        public GeneratorConfiguration(string targetNamespace, string enabled, string xamlFramework)
+        internal GeneratorConfiguration(string targetNamespace, string enabled, string xamlFramework, string modules, string fallback)
         {
-            TargetNamespace = string.IsNullOrWhiteSpace(targetNamespace)
-                ? "ArkheideSystem.Essential.Culture"
-                : targetNamespace.Trim();
+            TargetNamespace = string.IsNullOrWhiteSpace(targetNamespace) ? "ArkheideSystem.Essential.Culture" : targetNamespace.Trim();
             Enabled = enabled;
             XamlFramework = xamlFramework;
-        }
-
-        public string TargetNamespace { get; }
-
-        public string Enabled { get; }
-
-        public string XamlFramework { get; }
-
-        public bool Equals(GeneratorConfiguration? other) =>
-            other is not null
-            && string.Equals(TargetNamespace, other.TargetNamespace, StringComparison.Ordinal)
-            && string.Equals(Enabled, other.Enabled, StringComparison.Ordinal)
-            && string.Equals(XamlFramework, other.XamlFramework, StringComparison.Ordinal);
-
-        public override bool Equals(object? obj) => Equals(obj as GeneratorConfiguration);
-
-        public override int GetHashCode()
-        {
-            unchecked
+            Modules = modules;
+            try
             {
-                return StringComparer.Ordinal.GetHashCode(TargetNamespace) * 397
-                    ^ StringComparer.Ordinal.GetHashCode(Enabled) * 31
-                    ^ StringComparer.Ordinal.GetHashCode(XamlFramework);
+                FallbackCulture = ResourceParser.NormalizeCulture(string.IsNullOrWhiteSpace(fallback) ? "en-US" : fallback);
+                ValidFallback = true;
             }
+            catch (FormatException) { FallbackCulture = fallback; }
         }
+        internal string TargetNamespace { get; }
+        internal string Enabled { get; }
+        internal string XamlFramework { get; }
+        internal string Modules { get; }
+        internal string FallbackCulture { get; }
+        internal bool ValidFallback { get; }
+        public bool Equals(GeneratorConfiguration? other) => other is not null
+            && TargetNamespace == other.TargetNamespace && Enabled == other.Enabled && XamlFramework == other.XamlFramework
+            && Modules == other.Modules && FallbackCulture == other.FallbackCulture && ValidFallback == other.ValidFallback;
+        public override bool Equals(object? obj) => Equals(obj as GeneratorConfiguration);
+        public override int GetHashCode() => TargetNamespace.GetHashCode() ^ Enabled.GetHashCode()
+            ^ XamlFramework.GetHashCode() ^ Modules.GetHashCode() ^ FallbackCulture.GetHashCode() ^ ValidFallback.GetHashCode();
     }
 
     private enum GeneratorMode
@@ -660,396 +648,4 @@ public sealed class CultureGenerator : IIncrementalGenerator
         WinUI = 4,
     }
 
-    private sealed class JsonKeyReader
-    {
-        private readonly string text;
-        private readonly CancellationToken cancellationToken;
-        private int position;
-
-        private JsonKeyReader(string text, CancellationToken cancellationToken)
-        {
-            this.text = text;
-            this.cancellationToken = cancellationToken;
-        }
-
-        public static bool TryRead(
-            string text,
-            CancellationToken cancellationToken,
-            out string[] keys,
-            out string error
-        )
-        {
-            try
-            {
-                var reader = new JsonKeyReader(text, cancellationToken);
-                var collected = new List<string>();
-                reader.SkipWhitespace();
-                reader.ReadObject(collected);
-                reader.SkipWhitespace();
-                if (!reader.IsEnd)
-                {
-                    reader.Fail("unexpected content after the root object");
-                }
-
-                keys = [.. collected];
-                error = string.Empty;
-                return true;
-            }
-            catch (FormatException exception)
-            {
-                keys = Array.Empty<string>();
-                error = exception.Message;
-                return false;
-            }
-        }
-
-        private bool IsEnd => position >= text.Length;
-
-        private char Current => !IsEnd ? text[position] : '\0';
-
-        private void ReadObject(List<string>? rootKeys)
-        {
-            Expect('{');
-            SkipWhitespace();
-            if (TryConsume('}'))
-            {
-                return;
-            }
-
-            while (true)
-            {
-                CheckCancellation();
-                SkipWhitespace();
-                string? name = null;
-                if (rootKeys is null)
-                {
-                    SkipString();
-                }
-                else
-                {
-                    name = ReadString();
-                }
-                SkipWhitespace();
-                Expect(':');
-                SkipWhitespace();
-                if (rootKeys is not null && Current != '{')
-                {
-                    Fail($"key '{name}' must contain a culture-to-string object");
-                }
-
-                if (name is not null)
-                {
-                    rootKeys!.Add(name);
-                }
-                ReadValue();
-                SkipWhitespace();
-                if (TryConsume('}'))
-                {
-                    return;
-                }
-
-                Expect(',');
-            }
-        }
-
-        private void ReadArray()
-        {
-            Expect('[');
-            SkipWhitespace();
-            if (TryConsume(']'))
-            {
-                return;
-            }
-
-            while (true)
-            {
-                CheckCancellation();
-                ReadValue();
-                SkipWhitespace();
-                if (TryConsume(']'))
-                {
-                    return;
-                }
-
-                Expect(',');
-                SkipWhitespace();
-            }
-        }
-
-        private void ReadValue()
-        {
-            CheckCancellation();
-            SkipWhitespace();
-            switch (Current)
-            {
-                case '{':
-                    ReadObject(null);
-                    break;
-                case '[':
-                    ReadArray();
-                    break;
-                case '"':
-                    SkipString();
-                    break;
-                case 't':
-                    ConsumeLiteral("true");
-                    break;
-                case 'f':
-                    ConsumeLiteral("false");
-                    break;
-                case 'n':
-                    ConsumeLiteral("null");
-                    break;
-                default:
-                    ReadNumber();
-                    break;
-            }
-        }
-
-        private string ReadString()
-        {
-            Expect('"');
-            var result = new StringBuilder();
-            while (!IsEnd)
-            {
-                CheckCancellation();
-                var character = text[position++];
-                if (character == '"')
-                {
-                    return result.ToString();
-                }
-
-                if (character < ' ')
-                {
-                    Fail("a string contains an unescaped control character");
-                }
-
-                if (character != '\\')
-                {
-                    result.Append(character);
-                    continue;
-                }
-
-                if (IsEnd)
-                {
-                    Fail("a string ends after an escape character");
-                }
-
-                var escaped = text[position++];
-                switch (escaped)
-                {
-                    case '"':
-                    case '\\':
-                    case '/':
-                        result.Append(escaped);
-                        break;
-                    case 'b':
-                        result.Append('\b');
-                        break;
-                    case 'f':
-                        result.Append('\f');
-                        break;
-                    case 'n':
-                        result.Append('\n');
-                        break;
-                    case 'r':
-                        result.Append('\r');
-                        break;
-                    case 't':
-                        result.Append('\t');
-                        break;
-                    case 'u':
-                        result.Append(ReadUnicodeEscape());
-                        break;
-                    default:
-                        Fail($"contains unsupported escape '\\{escaped}'");
-                        break;
-                }
-            }
-
-            Fail("contains an unterminated string");
-            return string.Empty;
-        }
-
-        private void SkipString()
-        {
-            Expect('"');
-            while (!IsEnd)
-            {
-                CheckCancellation();
-                var character = text[position++];
-                if (character == '"')
-                {
-                    return;
-                }
-
-                if (character < ' ')
-                {
-                    Fail("a string contains an unescaped control character");
-                }
-
-                if (character != '\\')
-                {
-                    continue;
-                }
-
-                if (IsEnd)
-                {
-                    Fail("a string ends after an escape character");
-                }
-
-                var escaped = text[position++];
-                if (escaped == 'u')
-                {
-                    SkipUnicodeEscape();
-                }
-                else if (escaped is not ('"' or '\\' or '/' or 'b' or 'f' or 'n' or 'r' or 't'))
-                {
-                    Fail($"contains unsupported escape '\\{escaped}'");
-                }
-            }
-
-            Fail("contains an unterminated string");
-        }
-
-        private void SkipUnicodeEscape()
-        {
-            if (position + 4 > text.Length)
-            {
-                Fail("contains an incomplete unicode escape");
-            }
-
-            for (var index = 0; index < 4; index++)
-            {
-                var character = text[position++];
-                if (character is not (>= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F'))
-                {
-                    Fail($"invalid unicode escape at position {position - 1}");
-                }
-            }
-        }
-
-        private char ReadUnicodeEscape()
-        {
-            if (position + 4 > text.Length)
-            {
-                Fail("contains an incomplete unicode escape");
-            }
-
-            var value = 0;
-            for (var index = 0; index < 4; index++)
-            {
-                var character = text[position++];
-                value =
-                    value * 16
-                    + character switch
-                    {
-                        >= '0' and <= '9' => character - '0',
-                        >= 'a' and <= 'f' => character - 'a' + 10,
-                        >= 'A' and <= 'F' => character - 'A' + 10,
-                        _ => throw new FormatException(
-                            $"invalid unicode escape at position {position - 1}"
-                        ),
-                    };
-            }
-
-            return (char)value;
-        }
-
-        private void ReadNumber()
-        {
-            var start = position;
-            TryConsume('-');
-            if (TryConsume('0'))
-            {
-                if (char.IsDigit(Current))
-                {
-                    Fail("a number contains a leading zero");
-                }
-            }
-            else
-            {
-                ReadDigits(required: true);
-            }
-
-            if (TryConsume('.'))
-            {
-                ReadDigits(required: true);
-            }
-
-            if (TryConsume('e') || TryConsume('E'))
-            {
-                _ = TryConsume('+') || TryConsume('-');
-                ReadDigits(required: true);
-            }
-
-            if (position == start)
-            {
-                Fail("expected a JSON value");
-            }
-        }
-
-        private void ReadDigits(bool required)
-        {
-            var start = position;
-            while (char.IsDigit(Current))
-            {
-                position++;
-            }
-
-            if (required && start == position)
-            {
-                Fail("expected a digit");
-            }
-        }
-
-        private void ConsumeLiteral(string literal)
-        {
-            for (var index = 0; index < literal.Length; index++)
-            {
-                if (IsEnd || text[position++] != literal[index])
-                {
-                    Fail($"expected '{literal}'");
-                }
-            }
-        }
-
-        private void SkipWhitespace()
-        {
-            while (Current is ' ' or '\t' or '\r' or '\n')
-            {
-                position++;
-            }
-        }
-
-        private void Expect(char expected)
-        {
-            if (!TryConsume(expected))
-            {
-                Fail($"expected '{expected}'");
-            }
-        }
-
-        private bool TryConsume(char expected)
-        {
-            if (Current != expected)
-            {
-                return false;
-            }
-
-            position++;
-            return true;
-        }
-
-        private void Fail(string message) =>
-            throw new FormatException($"{message} at position {position}");
-
-        private void CheckCancellation()
-        {
-            if ((position & 1023) == 0)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-        }
-    }
 }

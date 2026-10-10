@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Text;
 using System.Text.Json;
@@ -11,14 +12,16 @@ namespace ArkheideSystem.Essential.Culture;
 public sealed class LocalizationCatalog
 {
     private readonly Catalog catalog;
-    private readonly Lock cacheGate = new();
-    private readonly Dictionary<string, CatalogSelection> selections =
+    private readonly ConcurrentDictionary<string, Lazy<CatalogSelection>> selections =
         new(StringComparer.OrdinalIgnoreCase);
 
     private LocalizationCatalog(Catalog catalog) => this.catalog = catalog;
 
-    /// <summary>Gets the normalized cultures declared by every key in this catalog.</summary>
-    public IReadOnlyList<string> AvailableCultures => catalog.Cultures;
+    /// <summary>Gets selectable culture names, or all declared names when no policy is configured.</summary>
+    public IReadOnlyList<string> AvailableCultures => catalog.AvailableCultures;
+
+    /// <summary>Gets the union of normalized culture names authored in all catalog documents.</summary>
+    public IReadOnlyList<string> DeclaredCultures => catalog.DeclaredCultures;
 
     /// <summary>Gets the configured fallback translation culture.</summary>
     public string FallbackCulture => catalog.Fallback;
@@ -31,6 +34,17 @@ public sealed class LocalizationCatalog
         return Load(stream, fallbackCulture);
     }
 
+    /// <summary>Parses and fully validates JSON while retaining only the configured languages.</summary>
+    public static LocalizationCatalog FromJson(
+        string json, string fallbackCulture, CatalogLoadOptions options
+    )
+    {
+        ArgumentNullException.ThrowIfNull(json);
+        ArgumentNullException.ThrowIfNull(options);
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+        return Load(stream, fallbackCulture, options);
+    }
+
     /// <summary>
     /// Reads and validates a catalog from the stream's current position. The caller owns the stream;
     /// this method does not close it, including when validation fails.
@@ -39,71 +53,147 @@ public sealed class LocalizationCatalog
     {
         ArgumentNullException.ThrowIfNull(stream);
         var fallback = KeyValidation.NormalizeCulture(fallbackCulture, nameof(fallbackCulture));
-        return new LocalizationCatalog(ReadDocument(stream, "<stream>", fallback));
+        return LoadDocument(stream, "<stream>", fallback, null);
+    }
+
+    /// <summary>Fully validates the stream and filters retained translations without closing it.</summary>
+    public static LocalizationCatalog Load(
+        Stream stream, string fallbackCulture, CatalogLoadOptions options
+    )
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(options);
+        var fallback = KeyValidation.NormalizeCulture(fallbackCulture, nameof(fallbackCulture));
+        return LoadDocument(stream, "<stream>", fallback, options);
     }
 
     /// <summary>Reads and validates a catalog from an explicitly supplied file path.</summary>
     public static LocalizationCatalog FromFile(string path, string fallbackCulture = "en-US")
     {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            throw new ArgumentException("The file path cannot be empty.", nameof(path));
-        }
-
-        var sourcePath = Path.GetFullPath(path);
-        if (!File.Exists(sourcePath))
-        {
-            throw new FileNotFoundException($"File '{sourcePath}' does not exist.", sourcePath);
-        }
-
+        var sourcePath = ValidatePath(path);
         var fallback = KeyValidation.NormalizeCulture(fallbackCulture, nameof(fallbackCulture));
         return LoadValidatedFile(sourcePath, fallback);
     }
 
+    /// <summary>Fully validates a file and applies an immutable retained-language policy.</summary>
+    public static LocalizationCatalog FromFile(
+        string path, string fallbackCulture, CatalogLoadOptions options
+    )
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        var sourcePath = ValidatePath(path);
+        var fallback = KeyValidation.NormalizeCulture(fallbackCulture, nameof(fallbackCulture));
+        var policy = CreatePolicy(fallback, options);
+        return CreateCatalog(ReadFile(sourcePath, fallback, policy), fallback, options);
+    }
+
+    /// <summary>
+    /// Eagerly composes explicitly supplied modules with globally unique keys. Each document must
+    /// have consistent per-key languages and the fallback; optional languages may differ by module.
+    /// </summary>
+    public static LocalizationCatalog FromFiles(
+        IEnumerable<string> paths,
+        string fallbackCulture = "en-US",
+        CatalogLoadOptions? options = null
+    )
+    {
+        ArgumentNullException.ThrowIfNull(paths);
+        var fallback = KeyValidation.NormalizeCulture(fallbackCulture, nameof(fallbackCulture));
+        var policy = CreatePolicy(fallback, options);
+        var seenPaths = new HashSet<string>(
+            OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal
+        );
+        var entries = new Dictionary<string, CatalogEntry>(StringComparer.Ordinal);
+        var sources = new Dictionary<string, string>(StringComparer.Ordinal);
+        var declared = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var retained = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in paths)
+        {
+            var sourcePath = ValidatePath(path);
+            if (!seenPaths.Add(sourcePath))
+            {
+                throw new ArgumentException($"Module path '{sourcePath}' is supplied more than once.", nameof(paths));
+            }
+
+            var module = ReadFile(sourcePath, fallback, policy);
+            foreach (var (key, entry) in module.Entries)
+            {
+                if (!entries.TryAdd(key, entry))
+                {
+                    throw Invalid(sourcePath, $"contains duplicate key '{key}' also declared in '{sources[key]}'");
+                }
+                sources.Add(key, sourcePath);
+            }
+            declared.UnionWith(module.DeclaredCultures);
+            retained.UnionWith(module.RetainedCultures);
+        }
+
+        if (seenPaths.Count == 0)
+        {
+            throw new ArgumentException("At least one module path is required.", nameof(paths));
+        }
+
+        return CreateCatalog(new Document(entries, declared, retained), fallback, options);
+    }
+
+    /// <summary>
+    /// Tests a normalized exact selection against the configured policy. Without a policy, any
+    /// valid tag is enabled for legacy parent/fallback resolution. Invalid names throw.
+    /// </summary>
+    public bool IsCultureEnabled(string culture) =>
+        IsNormalizedCultureEnabled(KeyValidation.NormalizeCulture(culture, nameof(culture)));
+
+    internal bool IsNormalizedCultureEnabled(string culture) =>
+        !catalog.HasPolicy || catalog.SelectableCultures.Contains(culture);
+
     internal static LocalizationCatalog LoadValidatedFile(string path, string fallback)
     {
-        try
-        {
-            using var stream = File.OpenRead(path);
-            return new LocalizationCatalog(ReadDocument(stream, path, fallback));
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-        {
-            throw Invalid(path, "could not be read", error);
-        }
+        return CreateCatalog(ReadFile(path, fallback, CreatePolicy(fallback, null)), fallback, null);
     }
 
     internal CatalogSelection Select(string culture)
     {
-        lock (cacheGate)
+        if (!IsNormalizedCultureEnabled(culture))
         {
-            if (selections.TryGetValue(culture, out var selected))
-            {
-                return selected;
-            }
-
-            var cultureChain = GetCultureChain(culture, catalog.Fallback);
-            var rawValues = new Dictionary<string, Translation>(catalog.Entries.Count, StringComparer.Ordinal);
-            var tokenValues = new Dictionary<string, Translation>(catalog.Entries.Count, StringComparer.Ordinal);
-            foreach (var (key, entry) in catalog.Entries)
-            {
-                var translation = SelectTranslation(entry.Translations, cultureChain);
-                rawValues.Add(key, translation);
-                tokenValues.Add(entry.Token, translation);
-            }
-
-            selected = new CatalogSelection(
-                rawValues.ToFrozenDictionary(StringComparer.Ordinal),
-                tokenValues.ToFrozenDictionary(StringComparer.Ordinal)
-            );
-            // Only declared cultures form the shared cache. Arbitrary/custom requests stay bounded.
-            if (catalog.DeclaredCultures.Contains(culture))
-            {
-                selections.Add(culture, selected);
-            }
-
-            return selected;
+            throw new ArgumentException($"Culture '{culture}' is not enabled by this catalog.", nameof(culture));
         }
+
+        // All requests with the same deepest retained parent have the same per-module chain.
+        // Cache only retained names, never arbitrary requested tags.
+        var effective = GetEffectiveCulture(culture);
+        if (selections.TryGetValue(effective, out var selected)) return selected.Value;
+        return selections.GetOrAdd(effective, name => new Lazy<CatalogSelection>(
+            () => BuildSelection(name), LazyThreadSafetyMode.ExecutionAndPublication
+        )).Value;
+    }
+
+    private string GetEffectiveCulture(string culture)
+    {
+        while (true)
+        {
+            if (catalog.RetainedCultures.Contains(culture)) return culture;
+            var separator = culture.LastIndexOf('-');
+            if (separator <= 0) return catalog.Fallback;
+            culture = culture[..separator];
+        }
+    }
+
+    private CatalogSelection BuildSelection(string culture)
+    {
+        var cultureChain = GetCultureChain(culture, catalog.Fallback);
+        var rawValues = new Dictionary<string, Translation>(catalog.Entries.Count, StringComparer.Ordinal);
+        var tokenValues = new Dictionary<string, Translation>(catalog.Entries.Count, StringComparer.Ordinal);
+        foreach (var (key, entry) in catalog.Entries)
+        {
+            var translation = SelectTranslation(entry.Translations, cultureChain);
+            rawValues.Add(key, translation);
+            tokenValues.Add(entry.Token, translation);
+        }
+
+        return new CatalogSelection(
+            rawValues.ToFrozenDictionary(StringComparer.Ordinal),
+            tokenValues.ToFrozenDictionary(StringComparer.Ordinal)
+        );
     }
 
     private static Translation SelectTranslation(
@@ -150,7 +240,80 @@ public sealed class LocalizationCatalog
         }
     }
 
-    private static Catalog ReadDocument(Stream stream, string path, string fallback)
+    private static string ValidatePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new ArgumentException("The file path cannot be empty.", nameof(path));
+        }
+        var sourcePath = Path.GetFullPath(path);
+        if (!File.Exists(sourcePath))
+        {
+            throw new FileNotFoundException($"File '{sourcePath}' does not exist.", sourcePath);
+        }
+        return sourcePath;
+    }
+
+    private static LocalizationCatalog LoadDocument(
+        Stream stream, string path, string fallback, CatalogLoadOptions? options
+    ) => CreateCatalog(ReadDocument(stream, path, fallback, CreatePolicy(fallback, options)), fallback, options);
+
+    private static Document ReadFile(string path, string fallback, LoadPolicy policy)
+    {
+        try
+        {
+            using var stream = File.OpenRead(path);
+            return ReadDocument(stream, path, fallback, policy);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            throw Invalid(path, "could not be read", error);
+        }
+    }
+
+    private static LoadPolicy CreatePolicy(string fallback, CatalogLoadOptions? options)
+    {
+        if (options is null) return new LoadPolicy(null, null);
+        if (options.DisabledNames.Contains(fallback))
+        {
+            throw new ArgumentException($"Fallback culture '{fallback}' cannot be disabled.", nameof(options));
+        }
+        HashSet<string>? retained = null;
+        if (options.EnabledCultures is not null)
+        {
+            retained = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { fallback };
+            foreach (var enabled in options.EnabledCultures)
+            {
+                var name = enabled;
+                while (true)
+                {
+                    if (!options.DisabledNames.Contains(name)) retained.Add(name);
+                    var separator = name.LastIndexOf('-');
+                    if (separator <= 0) break;
+                    name = name[..separator];
+                }
+            }
+        }
+        return new LoadPolicy(retained, options.DisabledNames);
+    }
+
+    private static LocalizationCatalog CreateCatalog(Document document, string fallback, CatalogLoadOptions? options)
+    {
+        var declared = document.DeclaredCultures.OrderBy(value => value, StringComparer.OrdinalIgnoreCase).ToArray();
+        var available = options?.EnabledCultures?.ToArray()
+            ?? declared.Where(name => options is null || !options.DisabledNames.Contains(name)).ToArray();
+        return new LocalizationCatalog(new Catalog(
+            document.Entries.ToFrozenDictionary(StringComparer.Ordinal),
+            Array.AsReadOnly(declared),
+            Array.AsReadOnly(available),
+            available.ToFrozenSet(StringComparer.OrdinalIgnoreCase),
+            document.RetainedCultures.ToFrozenSet(StringComparer.OrdinalIgnoreCase),
+            options?.HasPolicy ?? false,
+            fallback
+        ));
+    }
+
+    private static Document ReadDocument(Stream stream, string path, string fallback, LoadPolicy policy)
     {
         try
         {
@@ -168,6 +331,7 @@ public sealed class LocalizationCatalog
             }
 
             var entries = new Dictionary<string, CatalogEntry>(StringComparer.Ordinal);
+            var cultureNames = new Dictionary<string, string>(StringComparer.Ordinal);
             HashSet<string>? expectedCultures = null;
             foreach (var property in document.RootElement.EnumerateObject())
             {
@@ -177,7 +341,7 @@ public sealed class LocalizationCatalog
                     throw Invalid(path, $"contains illegal key '{key}'");
                 }
 
-                var translations = ParseTranslations(path, key, property.Value);
+                var translations = ParseTranslations(path, key, property.Value, cultureNames);
                 if (!translations.ContainsKey(fallback))
                 {
                     throw Invalid(
@@ -205,12 +369,15 @@ public sealed class LocalizationCatalog
                 }
 
                 ValidateFormatPlaceholders(path, key, translations, fallback);
+                var retainedTranslations = policy.HasFilter
+                    ? translations.Where(pair => policy.ShouldRetain(pair.Key))
+                    : translations;
                 if (
                     !entries.TryAdd(
                         key,
                         new CatalogEntry(
                             KeyToken.Prefix + key,
-                            translations.ToFrozenDictionary(
+                            retainedTranslations.ToFrozenDictionary(
                                 pair => pair.Key,
                                 pair => new Translation(pair.Value.Text, pair.Value.Format),
                                 StringComparer.OrdinalIgnoreCase
@@ -228,16 +395,10 @@ public sealed class LocalizationCatalog
                 throw Invalid(path, "does not contain any translation keys");
             }
 
-            return new Catalog(
-                entries.ToFrozenDictionary(StringComparer.Ordinal),
-                Array.AsReadOnly(
-                    expectedCultures
-                        .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
-                        .ToArray()
-                ),
-                expectedCultures.ToFrozenSet(StringComparer.OrdinalIgnoreCase),
-                fallback
-            );
+            var retainedCultures = policy.HasFilter
+                ? expectedCultures.Where(policy.ShouldRetain).ToHashSet(StringComparer.OrdinalIgnoreCase)
+                : expectedCultures;
+            return new Document(entries, expectedCultures, retainedCultures);
         }
         catch (InvalidDataException)
         {
@@ -256,7 +417,8 @@ public sealed class LocalizationCatalog
     private static Dictionary<string, ParsedTranslation> ParseTranslations(
         string path,
         string key,
-        JsonElement element
+        JsonElement element,
+        Dictionary<string, string> cultureNames
     )
     {
         if (element.ValueKind != JsonValueKind.Object)
@@ -269,16 +431,21 @@ public sealed class LocalizationCatalog
         );
         foreach (var property in element.EnumerateObject())
         {
+            var authoredCulture = property.Name;
             string culture;
             try
             {
-                culture = KeyValidation.NormalizeCulture(property.Name, property.Name);
+                if (!cultureNames.TryGetValue(authoredCulture, out culture!))
+                {
+                    culture = KeyValidation.NormalizeCulture(authoredCulture, authoredCulture);
+                    cultureNames.Add(authoredCulture, culture);
+                }
             }
             catch (ArgumentException error)
             {
                 throw Invalid(
                     path,
-                    $"key '{key}' contains invalid culture '{property.Name}'",
+                    $"key '{key}' contains invalid culture '{authoredCulture}'",
                     error
                 );
             }
@@ -290,7 +457,7 @@ public sealed class LocalizationCatalog
             {
                 throw Invalid(
                     path,
-                    $"key '{key}' contains an empty or non-string value for culture '{property.Name}'"
+                    $"key '{key}' contains an empty or non-string value for culture '{authoredCulture}'"
                 );
             }
 
@@ -303,7 +470,7 @@ public sealed class LocalizationCatalog
             {
                 throw Invalid(
                     path,
-                    $"key '{key}' contains an invalid composite format for culture '{property.Name}'",
+                    $"key '{key}' contains an invalid composite format for culture '{authoredCulture}'",
                     error
                 );
             }
@@ -389,10 +556,28 @@ public sealed class LocalizationCatalog
 
     private sealed record Catalog(
         FrozenDictionary<string, CatalogEntry> Entries,
-        IReadOnlyList<string> Cultures,
-        FrozenSet<string> DeclaredCultures,
+        IReadOnlyList<string> DeclaredCultures,
+        IReadOnlyList<string> AvailableCultures,
+        FrozenSet<string> SelectableCultures,
+        FrozenSet<string> RetainedCultures,
+        bool HasPolicy,
         string Fallback
     );
+
+    private sealed record Document(
+        Dictionary<string, CatalogEntry> Entries,
+        HashSet<string> DeclaredCultures,
+        HashSet<string> RetainedCultures
+    );
+
+    private sealed record LoadPolicy(HashSet<string>? RetainedNames, FrozenSet<string>? DisabledNames)
+    {
+        internal bool HasFilter => RetainedNames is not null || DisabledNames is { Count: > 0 };
+
+        internal bool ShouldRetain(string culture) =>
+            (DisabledNames is null || !DisabledNames.Contains(culture))
+            && (RetainedNames is null || RetainedNames.Contains(culture));
+    }
 
     private sealed record CatalogEntry(
         string Token,

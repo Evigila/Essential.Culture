@@ -123,4 +123,4 @@ VersionPrefix is 1.3.0, the new project is included in the library and demo solu
 
 ## Repository migration on 2026-10-05
 
-The checkout is now Essential and the six Culture libraries are grouped under src/Essential.Culture. Root/module/test/demo references and CI were updated without changing translation identities or runtime behavior. Existing human guides were moved into the module and their Demo/license links adjusted. The 89 tests, five demos and six packages passed again after migration. See [solution organization](solution-organization.md) and [directory tree](currentproject-architecture.md).
+The checkout is now Essential and the six Culture libraries are grouped under src/Essential.Culture. Root/module/test/demo references and CI were updated without changing translation identities or runtime behavior. Existing human guides were moved into the module and their Demo/license links adjusted. The 89 tests, five demos and six packages passed again after migration. See [solution organization](solution-organization.md) and [directory tree](1_architecture.md).

@@ -6,7 +6,15 @@
     JavaScriptTests = @()
     CheckScripts = @()
     PackagePrefix = 'Arkheide.Essential.Culture'
-    EssentialVersion = '1.3.0'
+    EssentialVersion = '1.4.0'
+    RepositoryUrl = 'https://github.com/Evigila/Essential'
+    PackageReadme = 'src/Essential.Culture/README.md'
+    TrustedPublishing = @{
+        RepositoryOwner = 'Evigila'
+        RepositoryName = 'Essential'
+        WorkflowFile = 'build.yml'
+        Environment = 'nuget'
+    }
     Packages = @(
         @{ Id = 'Arkheide.Essential.Culture.Generator'; Project = 'src/Essential.Culture/Essential.Culture.Generator/Essential.Culture.Generator.csproj'; Dependencies = @(); Assets = @('analyzers/dotnet/cs/Essential.Culture.Generator.dll', 'buildTransitive/Arkheide.Essential.Culture.Generator.props', 'buildTransitive/Arkheide.Essential.Culture.Generator.targets', 'buildTransitive/Culture.template.json'); Managed = $false }
         @{ Id = 'Arkheide.Essential.Culture'; Project = 'src/Essential.Culture/Essential.Culture/Essential.Culture.csproj'; Dependencies = @('Arkheide.Essential.Culture.Generator'); Assets = @(); Managed = $true }

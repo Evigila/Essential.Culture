@@ -1,5 +1,6 @@
 param([ValidateSet('Prepare', 'Publish')][string]$Mode = 'Prepare', [switch]$SkipBuild)
 . (Join-Path $PSScriptRoot 'Release-Common.ps1')
+Assert-ReleaseRepository
 function Assert-CleanMaster {
     $status = @(& git -C $ReleaseRoot status --porcelain)
     if ($LASTEXITCODE -ne 0 -or $status.Count) { throw 'Release requires a clean working tree, including untracked files.' }

@@ -1,6 +1,7 @@
 param([switch]$VerifyOnly, [string]$ArtifactsPath)
 . (Join-Path $PSScriptRoot 'Release-Common.ps1')
 $version = Get-ReleaseVersion
+Assert-ReleaseRepository
 if (!$ArtifactsPath) { $ArtifactsPath = Join-Path $ReleaseRoot 'artifacts/release-build' }
 $ArtifactsPath = [IO.Path]::GetFullPath($ArtifactsPath)
 if ($VerifyOnly) { & (Join-Path $PSScriptRoot 'Verify-PackageSet.ps1') -Version $version; return }
@@ -26,5 +27,6 @@ try {
     }
     & (Join-Path $PSScriptRoot 'Verify-PackageSet.ps1') -Version $version
     & (Join-Path $PSScriptRoot 'Verify-BlazorPackageConsumer.ps1') -PackageDirectory $packages -Version $version
+    & (Join-Path $PSScriptRoot 'Verify-ModulesPackageConsumer.ps1') -PackageDirectory $packages -Version $version
     Write-Host "Release preparation completed for v$version. No Git or publishing changes were made."
 } finally { Pop-Location }

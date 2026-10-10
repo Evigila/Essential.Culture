@@ -1,6 +1,14 @@
 # Culture NuGet release and integration
 
-## Current release state
+## Current candidate and repository rename
+
+The working tree prepares **1.4.0** for the six existing Culture package IDs. Package metadata and release preflight now identify `https://github.com/Evigila/Essential`. The user recreated the NuGet Trusted Publishing policy after the repository rename. This task prepares and verifies local candidates; it does not create a commit/tag, push, or publish.
+
+The effective policy fields are repository owner `Evigila`, repository name `Essential`, workflow filename `build.yml` and GitHub environment `nuget`. `NUGET_USER` remains a variable/secret containing the NuGet profile username. Preflight checks repository/workflow/environment/tag/OIDC context, while the remote account policy is verified only by a successful `NuGet/login` in an authorized tag workflow. Prior success under the old repository name is historical evidence and does not validate the recreated policy.
+
+Preparation verifies six packages' identities, versions, dependency graph, repository/project URLs, README bytes, license, DLL/XML documentation and generator assets. It also executes separate fresh-cache candidate consumers for Blazor-only dependency adoption and core-only modular resource generation/build/publish. [Resource configuration](culture-resource-usage.md) documents the startup language policy and eager modules. [Release verification](release-verification.md) records actual results.
+
+## Historical completed 1.3.0 release
 
 Essential.Culture 1.3.0 is published, publicly indexed and verified by fresh-cache public-only consumption. Source commit [983c636bdba7e1a7b74cee33b5c682c9bf06364e](https://github.com/Evigila/Essential.Culture/commit/983c636bdba7e1a7b74cee33b5c682c9bf06364e) is tagged v1.3.0. [Run 37537838178](https://github.com/Evigila/Essential.Culture/actions/runs/37537838178) succeeded, including Trusted Publishing login and six Created uploads. All six public flat-container indexes returned HTTP 200 and contain 1.3.0.
 
@@ -12,9 +20,9 @@ All six Flourish 1.1.1 public flat-container indexes now return HTTP 200 and con
 
 ## Module and package boundaries
 
-Essential.slnx contains the Culture libraries and tests. The focused source solution is src/Essential.Culture/Essential.Culture.slnx; demo/Gallery.Essential.Culture.slnx contains five examples. VersionPrefix=1.3.0 belongs to src/Essential.Culture/Directory.Build.props. scripts/ReleaseSettings.psd1 releases in this order:
+Essential.slnx contains the Culture libraries and tests. The focused source solution is src/Essential.Culture/Essential.Culture.slnx; demo/Gallery.Essential.Culture.slnx contains five examples. Candidate VersionPrefix=1.4.0 belongs to src/Essential.Culture/Directory.Build.props. scripts/ReleaseSettings.psd1 releases in this order:
 
-| Order | Essential.Culture 1.3.0 package |
+| Order | Essential.Culture 1.4.0 candidate package |
 |---|---|
 | 1 | Arkheide.Essential.Culture.Generator |
 | 2 | Arkheide.Essential.Culture |
@@ -23,13 +31,13 @@ Essential.slnx contains the Culture libraries and tests. The focused source solu
 | 5 | Arkheide.Essential.Culture.WinUI |
 | 6 | Arkheide.Essential.Culture.Blazor |
 
-Generator has no runtime dependency. Core owns immutable catalogs, contexts and the established desktop facade; the platform adapters depend on Core. The Blazor package brings Core/Generator transitively. Essential does not depend on Flourish. Stable Arkheide.* NuGet IDs are independent of the current Evigila/Essential.Culture GitHub repository identity.
+Generator has no runtime dependency. Core owns immutable catalogs, contexts and the established desktop facade; the platform adapters depend on Core. The Blazor package brings Core/Generator transitively. Essential does not depend on Flourish. Stable Arkheide.* NuGet IDs are independent of the current Evigila/Essential GitHub repository identity.
 
 Flourish's six 1.1.1 packages are Core, Abstract, Culture bridge, Framework, Design and the dependency-only Blazor umbrella, in that order. The umbrella installs its Culture bridge automatically; Framework alone omits Design/Culture. Flourish WPF is excluded. See the coordinated [Flourish release guide](../../../Flourish/docs-ai/current/nuget-release-integration.md) for exact IDs and the dependency graph.
 
 ## Single-file translations and Blazor behavior
 
-Maintain one Culture.json in each owning application with complete en-US, zh-CN and pt-BR values under each key. Pass that file as an AdditionalFile for generated Key tokens and embed it for runtime catalog loading. The published Blazor consumer verifies that Generator arrives transitively without a separate direct reference. Keep placeholder indices consistent across translations and include the fallback culture in each entry.
+Maintain the multilingual key format within each application-owned file. A single Culture.json remains the default; optional CultureModule items compose functional files into one logical catalog. Use the generated deployment manifest with FromFiles, or explicitly embed/load resources in the host. The Blazor consumer verifies Generator arrives transitively. Keep placeholder indices consistent, include fallback in every entry, and maintain uniform per-key culture sets within each file.
 
 AddCultureBlazor registers immutable catalogs and a request/circuit-scoped ILocalizationService. AddCatalog, SetDefaultCatalog, SetDefaultCulture and AddSupportedCultures select catalogs/defaults; InitializeWith controls initial scope selection. Resolve generated string tokens with Parse/ParseFrom or TryParse/TryParseFrom. Generator emits a static Key class; TextKey is a host alias for that class, not a runtime type. The actual ILocalizationService APIs accept string tokens. Catalog IDs distinguish host and library dictionaries. Culture is a UI-culture string and FormatCulture is a formatting CultureInfo; LocalizedText encodes its output. LocalizedComponentBase reacts to Changed and disposes the subscription. Resolve visible prose/status/validation at render time instead of caching translated sentences.
 
@@ -38,13 +46,13 @@ The lookup/generation contract is shared with Essential's other targets. Blazor'
 ## Local preparation
 
 ```powershell
-Set-Location C:\Users\RC_Auditoria\source\Repos\Essential
+# Run from the Essential repository root.
 .\scripts\Test-Release.ps1 -ArtifactsPath .\artifacts\release-build
 ```
 
-Prepare is the default of the batch helper. Test-Release restores/builds in Release with warnings as errors, tests the module, builds five source-mode Galleries, packs/verifies six libraries and checks an isolated Blazor-only package consumer. ArtifactsPath isolates both SDK output and intermediate files. Demos otherwise default to PackageReference; a source-mode demo alone is not package-adoption evidence. -VerifyOnly and helper -SkipBuild inspect existing packages without proving they match current source, and do not waive Publish's guards.
+Prepare is the default of the batch helper. Test-Release restores/builds in Release with warnings as errors, tests the module, builds five source-mode Galleries, packs/verifies six libraries and checks isolated Blazor-only and modular core-only package consumers. ArtifactsPath isolates both SDK output and intermediate files. Demos otherwise default to PackageReference; a source-mode demo alone is not package-adoption evidence. -VerifyOnly and helper -SkipBuild inspect existing packages without proving they match current source, and do not waive Publish's guards.
 
-The release preparation passed 106 tests: Core 61, Generator 20, Blazor 21 and WinUI 4. Five Galleries built with zero warnings/errors. A subsequent metadata-only six-package repack verified the current Essential.Culture URL in every nuspec; it did not rerun functional tests. Public-only consumption then passed as recorded above.
+The current 1.4.0 preparation passed 201 tests: Core 89, Generator 82, Blazor 26 and WinUI 4. Five Galleries built in source and candidate-package modes with zero warnings/errors. Six candidates and both isolated consumers passed; the final Generator build assets were checked against current source hashes. See [current verification](release-verification.md#current-local-140-candidate-verification-on-2026-10-09). The earlier 106-test result and public-only consumer belong to the historical 1.3.0 release.
 
 For future unpublished Essential candidates, Flourish accepts an explicit EssentialPackageDirectory NuGet feed; it has no implicit sibling feed or source fallback. Flourish packs its targeted six-library graph before fresh-cache Gallery/full-solution validation and four isolated consumers. The current Essential 1.3.0 dependency is already available publicly. Flourish's explicit PublicSource mode also completed the four public-only consumers with 129 passing checks; it rejects local package-directory parameters and does not affect the default local/CI path.
 
@@ -55,12 +63,12 @@ Both repositories use .github/workflows/build.yml and the GitHub environment nug
 | Policy field | Essential | Flourish |
 |---|---|---|
 | Owner | Evigila | Evigila |
-| Repository | Essential.Culture | Flourish |
+| Repository | Essential | Flourish |
 | Repository ID | 1327295083 | 1246107902 |
 | Workflow filename | build.yml | build.yml |
 | Environment | nuget | nuget |
 
-The workflow field is build.yml without .github/workflows/. Successful login and Created uploads establish authorization for these exact released package sets, including first creation of the new IDs. They do not authorize unrelated future packages. An Arkheide.Flourish.* policy scope can support initial ID creation while the release manifest/verifier restrict publication to exactly the six Core/Blazor packages. See [official Trusted Publishing guidance](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing).
+The workflow field is build.yml without .github/workflows/. The Essential row describes the recreated policy required for the 1.4.0 candidate; its remote authorization awaits the actual tag workflow. Historical 1.3.0 login/uploads used the preceding repository name. Package scope must cover all six existing IDs, and the policy must be active. Check GitHub environment protections/tag permissions and the profile variable before release. See [official Trusted Publishing guidance](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing).
 
 ## Future release procedure
 
@@ -68,7 +76,7 @@ Prepare is the default of publish-helper.bat / scripts/Publish-Helper.ps1. Publi
 
 The tag-only workflow downloads and re-verifies its artifact before pushing in manifest order with --skip-duplicate. Do not replace existing tags or released versions. Essential v1.3.0, Flourish v1.1.0 and v1.1.1 retain their original commits; the two v1.1.0 attempts skipped publication and the corrected six-package version is 1.1.1. For a partial or failed release, inspect actual workflow/package state and obtain the effective authorization for the next version. Verify workflow success, public indexing and a fresh-cache public-source consumer as separate acceptance steps.
 
-The published tags retain their original source commits. Final technical documentation and the public-verification helper correction will be committed separately under the user's existing commit/publication authorization; they do not create a new release tag or republish packages. Future commits and publication follow AGENTS.md and the user's task-scoped authorization.
+Published tags retain their original source commits. The 1.4.0 candidate requires a separately authorized commit and subsequent tag publication; this preparation does not authorize those actions. Follow AGENTS.md and the user's task-scoped authorization.
 
 ## User-operated acceptance
 
@@ -77,4 +85,4 @@ The published tags retain their original source commits. Final technical documen
 - Run desktop Galleries and confirm translated bindings refresh on language changes.
 - In a new application referencing only the public Blazor package, check generated keys and encoded translated output without a direct Generator reference.
 
-No Computer Use acceptance was performed. The public-only automated consumer passed. [Release verification](release-verification.md) retains current evidence and historical snapshots; existing append-only changes and bug reports remain unchanged. Earlier pending username/policy/publication statements and the interim hard-coded profile decision are superseded by the current configuration and successful release evidence.
+No Computer Use acceptance was performed. Candidate consumers passed locally; public-only acceptance is completed for historical 1.3.0 and awaits future 1.4.0 publication. [Release verification](release-verification.md) retains current evidence and historical snapshots; existing append-only changes and bug reports remain unchanged. Historical username/publication statements describe their dated releases; they do not certify the recreated Essential policy.

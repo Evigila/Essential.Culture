@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ArkheideSystem.Essential.Culture.Performance</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <EssentialCultureAutoInclude>false</EssentialCultureAutoInclude>
+    <EssentialCultureAutoCreate>false</EssentialCultureAutoCreate>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(BaselineCatalogProject)' == ''">
+    <ProjectReference Include="../../src/Essential.Culture/Essential.Culture/Essential.Culture.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(BaselineCatalogProject)' != ''">
+    <ProjectReference Include="$(BaselineCatalogProject)" />
+  </ItemGroup>
+</Project>

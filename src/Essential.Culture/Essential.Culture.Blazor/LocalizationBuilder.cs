@@ -78,6 +78,15 @@ public sealed class LocalizationBuilder
             : supportedCultures.ToArray();
         if (!cultures.Contains(defaultCulture, StringComparer.OrdinalIgnoreCase))
             throw new InvalidOperationException("The default culture must be in the supported UI cultures.");
+        foreach (var (catalogId, catalog) in catalogs)
+        {
+            foreach (var culture in cultures)
+            {
+                if (!catalog.IsCultureEnabled(culture))
+                    throw new InvalidOperationException(
+                        $"UI culture '{culture}' is disabled by catalog '{catalogId}'. Align the host's supported cultures with every catalog's language policy.");
+            }
+        }
         completed = true;
         return new LocalizationOptions(
             new ReadOnlyDictionary<string, LocalizationCatalog>(new Dictionary<string, LocalizationCatalog>(catalogs, StringComparer.Ordinal)),

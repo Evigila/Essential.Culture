@@ -3,18 +3,53 @@ namespace ArkheideSystem.Essential.Culture;
 /// <summary>Preserves the process-wide desktop facade over an isolated catalog/context implementation.</summary>
 internal sealed class LocalizationRuntime
 {
-    private static class SharedHolder
+    private static readonly Lock sharedGate = new();
+    private static LocalizationRuntime? shared;
+    private static bool started;
+
+    private static class DefaultHolder
     {
+        static DefaultHolder() { }
+
         internal static readonly LocalizationRuntime Instance = new(
-            Path.Combine(AppContext.BaseDirectory, "Culture.json"),
-            "en-US",
-            "en-US"
+            Path.Combine(AppContext.BaseDirectory, "Culture.json"), "en-US", "en-US"
         );
     }
 
     private readonly LocalizationContext context;
 
-    internal static LocalizationRuntime Shared => SharedHolder.Instance;
+    internal static LocalizationRuntime Shared
+    {
+        get
+        {
+            if (Volatile.Read(ref shared) is { } current) return current;
+            lock (sharedGate)
+            {
+                if (shared is null)
+                {
+                    started = true;
+                    var created = DefaultHolder.Instance;
+                    Volatile.Write(ref shared, created);
+                }
+                return shared;
+            }
+        }
+    }
+
+    internal static void Configure(LocalizationCatalog catalog, string culture, string? formatCulture)
+    {
+        ArgumentNullException.ThrowIfNull(catalog);
+        lock (sharedGate)
+        {
+            if (started)
+            {
+                throw new InvalidOperationException("The static localizer has already been configured or used.");
+            }
+            var configured = new LocalizationRuntime(catalog, culture, formatCulture);
+            started = true;
+            Volatile.Write(ref shared, configured);
+        }
+    }
 
     internal LocalizationRuntime(string path, string current, string fallback = "en-US")
     {
@@ -34,6 +69,12 @@ internal sealed class LocalizationRuntime
         context = new LocalizationContext(
             catalog, KeyValidation.NormalizeCulture(current, nameof(current))
         );
+        context.Changed += (_, args) => Changed?.Invoke(this, args);
+    }
+
+    private LocalizationRuntime(LocalizationCatalog catalog, string culture, string? formatCulture)
+    {
+        context = new LocalizationContext(catalog, culture, formatCulture);
         context.Changed += (_, args) => Changed?.Invoke(this, args);
     }
 
